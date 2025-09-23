@@ -1,5 +1,6 @@
 package rpg.main;
 
+import java.util.Scanner;
 import rpg.builder.CharacterBuilder;
 import rpg.builder.InvalidCharacterException;
 import rpg.core.Character;
@@ -10,6 +11,7 @@ import rpg.decorator.FireResistance;
 import rpg.decorator.Invisibility;
 import rpg.decorator.Telepathy;
 import rpg.settings.GameSettings;
+import rpg.ui.RpgGui;
 
 public class Main {
     public static void main(String[] args) {
@@ -18,7 +20,6 @@ public class Main {
         CharacterBuilder b = new CharacterBuilder();
         Character alice = b.setName("Alice").setStrength(8).setAgility(6).setIntelligence(8).build();
         Character bob = b.setName("Bob").setStrength(10).setAgility(5).setIntelligence(5).build();
-        // demonstrate invalid character handling
         try {
             Character invalid = b.setName("TooStrong").setStrength(50).setAgility(10).setIntelligence(10).build();
             System.out.println("Created invalid: " + invalid);
@@ -55,9 +56,52 @@ public class Main {
 
         System.out.println("Find Bob: " + dao.findByName("Bob"));
 
-    // Simulate a combat between Alice and Bob
-    System.out.println("\nSimulating combat Alice vs Bob:");
-    Character winner = Combat.simulate(alice, bob, true);
-    System.out.println("Winner: " + winner.getName());
+        System.out.println("\nSimulating combat Alice vs Bob:");
+        Character winner = Combat.simulate(alice, bob, true);
+        System.out.println("Winner: " + winner.getName());
+
+        // If started with 'gui' argument, launch GUI immediately and exit CLI
+        for (String a : args) {
+            if (a.equalsIgnoreCase("gui")) {
+                new RpgGui(alice, bob, dao);
+                return;
+            }
+        }
+
+        // Use a single Scanner for all user input (pre-GUI prompt + interactive)
+        Scanner scanner = new Scanner(System.in);
+
+        // Offer to launch GUI before entering interactive CLI (WIP)
+        System.out.print("Lancer l'interface graphique (WIP) ? (y/n): ");
+        String preGui = "n";
+        try {
+            String ln = scanner.nextLine();
+            if (ln != null) preGui = ln.trim();
+        } catch (Exception ignored) {
+        }
+        if (preGui.equalsIgnoreCase("y") || preGui.equalsIgnoreCase("yes")) {
+            System.out.println("Lancement de l'interface graphique (WIP)...");
+            new RpgGui(alice, bob, dao);
+            scanner.close();
+            return;
+        }
+
+        // No CLI custom-creation anymore: custom character creation is GUI-only (WIP)
+        System.out.println("\nCustom character creation and tests are now GUI-only (WIP). Launch GUI? (y/n): ");
+        String answer = "n";
+        try {
+            answer = scanner.nextLine().trim();
+        } catch (Exception ignored) {}
+        if (answer.equalsIgnoreCase("y") || answer.equalsIgnoreCase("yes")) {
+            System.out.println("Lancement de l'interface graphique (WIP)...");
+            new RpgGui(alice, bob, dao);
+            scanner.close();
+            return;
+        }
+
+        scanner.close();
+        System.out.println("Exiting demo. Bye!");
     }
+
+    // CLI custom creation removed — use GUI instead.
 }

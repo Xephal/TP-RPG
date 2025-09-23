@@ -4,13 +4,24 @@ Build & run (PowerShell / javac + java):
 
 From project root:
 
+Compile:
+
 ```powershell
+$files = Get-ChildItem -Recurse -Filter "*.java" | ForEach-Object { $_.FullName }; javac -d out $files; if ($LASTEXITCODE -eq 0) { echo 'COMPILE_OK' } else { echo 'COMPILE_FAIL' }
+```
+
+```powershell
+# Recommended: compile first, then run.
 javac -d out $(Get-ChildItem -Recurse -Filter "*.java" | ForEach-Object { $_.FullName })
+
+# Run the demo / CLI. The program will display the demo and then ask whether to launch the GUI.
 java -cp out rpg.main.Main
 ```
 
-or
+Custom creation note:
+
+Custom character creation is now GUI-only (WIP). To create, decorate and save custom characters, launch the GUI:
 
 ```powershell
-Get-ChildItem -Recurse -Filter "*.java" | ForEach-Object { $_.FullName } | %{ javac -d out $_ }
+java -cp out rpg.main.Main gui
 ```

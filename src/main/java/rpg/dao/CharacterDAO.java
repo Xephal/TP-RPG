@@ -27,14 +27,12 @@ public class CharacterDAO implements DAO<Character> {
         return new ArrayList<>(storage);
     }
 
-    // Returns a list sorted by descending power level (strongest first)
     public List<Character> findAllSortedByPower() {
         return storage.stream()
                 .sorted(Comparator.comparingInt(Character::getPowerLevel).reversed())
                 .collect(Collectors.toList());
     }
 
-    // Returns a list sorted by name (A..Z)
     public List<Character> findAllSortedByName() {
         return storage.stream()
                 .sorted(Comparator.comparing(Character::getName))
