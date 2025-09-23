@@ -1,7 +1,9 @@
 package rpg.dao;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 import rpg.core.Character;
 
 public class CharacterDAO implements DAO<Character> {
@@ -23,5 +25,19 @@ public class CharacterDAO implements DAO<Character> {
     @Override
     public List<Character> findAll() {
         return new ArrayList<>(storage);
+    }
+
+    // Returns a list sorted by descending power level (strongest first)
+    public List<Character> findAllSortedByPower() {
+        return storage.stream()
+                .sorted(Comparator.comparingInt(Character::getPowerLevel).reversed())
+                .collect(Collectors.toList());
+    }
+
+    // Returns a list sorted by name (A..Z)
+    public List<Character> findAllSortedByName() {
+        return storage.stream()
+                .sorted(Comparator.comparing(Character::getName))
+                .collect(Collectors.toList());
     }
 }

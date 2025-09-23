@@ -33,7 +33,10 @@ public class CharacterBuilder {
         Character c = new Character(name, strength, agility, intelligence);
         GameSettings settings = GameSettings.getInstance();
         if (!settings.isValid(c)) {
-            throw new IllegalArgumentException("Character does not respect game settings");
+            int sum = strength + agility + intelligence;
+            throw new InvalidCharacterException(
+                    String.format("Invalid character '%s': stat sum %d exceeds max %d",
+                            name, sum, settings.getMaxStatPoints()));
         }
         return c;
     }
