@@ -1,7 +1,9 @@
 package rpg.builder;
 
 import rpg.core.Character;
-import rpg.settings.GameSettings;
+import rpg.validation.ValidationContext;
+import rpg.validation.ValidationResult;
+import rpg.validation.ValidatorChain;
 
 public class CharacterBuilder {
     private String name = "Unnamed";
@@ -30,14 +32,14 @@ public class CharacterBuilder {
     }
 
     public Character build() {
-        Character c = new Character(name, strength, agility, intelligence);
-        GameSettings settings = GameSettings.getInstance();
-        if (!settings.isValid(c)) {
-            int sum = strength + agility + intelligence;
-            throw new InvalidCharacterException(
-                    String.format("Invalid character '%s': stat sum %d exceeds max %d",
-                            name, sum, settings.getMaxStatPoints()));
+        ValidationContext context = new ValidationContext(name, strength, agility, intelligence);
+        ValidatorChain chain = new ValidatorChain();
+        ValidationResult result = chain.validate(context);
+        
+        if (!result.isValid()) {
+            throw new InvalidCharacterException(result.getMessage());
         }
-        return c;
+        
+        return new Character(name, strength, agility, intelligence);
     }
 }
