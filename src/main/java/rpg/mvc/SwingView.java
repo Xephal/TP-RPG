@@ -1215,17 +1215,14 @@ public class SwingView extends View {
     }
     
     private void openInteractiveReplay(BattleHistory battle) {
-        // Create a new window for interactive replay
-        JFrame replayFrame = new JFrame("Interactive Replay: " + battle.getBattleName());
-        replayFrame.setSize(800, 600);
-        replayFrame.setLocationRelativeTo(frame);
-        
-        // TODO: Implement interactive replay interface
-        JLabel placeholder = new JLabel("<html><center>Interactive Replay Interface<br>Coming Soon!<br><br>This will allow you to:<br>- Step through each action<br>- Modify actions and see results<br>- Save interesting variants</center></html>");
-        placeholder.setHorizontalAlignment(SwingConstants.CENTER);
-        
-        replayFrame.add(placeholder);
-        replayFrame.setVisible(true);
+        // Launch the interactive replay window with callback to refresh history
+        InteractiveBattleReplay replayWindow = new InteractiveBattleReplay(
+            frame, 
+            battle, 
+            battleHistoryManager, 
+            () -> refreshBattleHistory() // Callback to refresh history tree when variant is saved
+        );
+        replayWindow.setVisible(true);
     }
     
     private void exportBattleToText(BattleHistory battle) {

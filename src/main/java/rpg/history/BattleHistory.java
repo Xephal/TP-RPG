@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+
 import rpg.core.Character;
 
 public class BattleHistory {
@@ -26,6 +27,28 @@ public class BattleHistory {
     
     public void addAction(BattleAction action) {
         actions.add(action);
+    }
+    
+    public void removeActionsFrom(int startIndex) {
+        // Remove all actions from startIndex onward
+        if (startIndex >= 0 && startIndex < actions.size()) {
+            actions.subList(startIndex, actions.size()).clear();
+        }
+    }
+    
+    public void replaceAction(int index, BattleAction newAction) {
+        // Replace the action at the given index
+        if (index >= 0 && index < actions.size()) {
+            actions.set(index, newAction);
+        }
+    }
+    
+    public BattleAction getAction(int index) {
+        // Get action at specific index
+        if (index >= 0 && index < actions.size()) {
+            return actions.get(index);
+        }
+        return null;
     }
     
     public void setWinner(Character winner) {
