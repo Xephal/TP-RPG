@@ -1,11 +1,44 @@
 package rpg.mvc;
 
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import javax.swing.*;
+
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.DefaultListModel;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSeparator;
+import javax.swing.JSpinner;
+import javax.swing.JTabbedPane;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.JTree;
+import javax.swing.ListSelectionModel;
+import javax.swing.SpinnerNumberModel;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 import javax.swing.border.TitledBorder;
-import javax.swing.tree.*;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeCellRenderer;
+import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreePath;
+
 import rpg.builder.InvalidCharacterException;
 import rpg.composite.Army;
 import rpg.core.Character;
@@ -15,6 +48,9 @@ import rpg.decorator.CharacterDecorator;
 import rpg.decorator.FireResistance;
 import rpg.decorator.Invisibility;
 import rpg.decorator.Telepathy;
+import rpg.history.AdvancedBattleHistoryManager;
+import rpg.history.BattleAction;
+import rpg.history.BattleHistory;
 import rpg.observer.EventBus;
 import rpg.settings.GameSettings;
 
@@ -46,7 +82,10 @@ public class SwingView extends View {
     private JTextField armyNameField;
     
     // Command History
-    private JTextArea historyArea;
+    private JTree battleHistoryTree;
+    private DefaultTreeModel historyTreeModel;
+    private DefaultMutableTreeNode historyRootNode;
+    private AdvancedBattleHistoryManager battleHistoryManager;
     private CombatEngine combatEngine;
     
     // Character editing state
@@ -69,6 +108,7 @@ public class SwingView extends View {
         this.eventBus = eventBus;
         this.dao = dao;
         this.combatEngine = new CombatEngine(eventBus);
+        this.battleHistoryManager = new AdvancedBattleHistoryManager();
         initializeGUI();
     }
 
@@ -477,27 +517,53 @@ public class SwingView extends View {
     private void createHistoryTab() {
         JPanel panel = new JPanel(new BorderLayout());
         
-        historyArea = new JTextArea(20, 60);
-        historyArea.setEditable(false);
-        historyArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
-        JScrollPane historyScroll = new JScrollPane(historyArea);
-        historyScroll.setBorder(new TitledBorder("Command History"));
+        // Create the history tree
+        historyRootNode = new DefaultMutableTreeNode("Battle History");
+        historyTreeModel = new DefaultTreeModel(historyRootNode);
+        battleHistoryTree = new JTree(historyTreeModel);
         
+        // Configure tree
+        battleHistoryTree.setRootVisible(false);
+        battleHistoryTree.setShowsRootHandles(true);
+        battleHistoryTree.setCellRenderer(new BattleHistoryTreeRenderer());
+        
+        // Add double-click listener for battle details
+        battleHistoryTree.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    handleBattleDoubleClick();
+                }
+            }
+        });
+        
+        JScrollPane treeScroll = new JScrollPane(battleHistoryTree);
+        treeScroll.setBorder(new TitledBorder("Battle History"));
+        
+        // Button panel
         JPanel buttonPanel = new JPanel(new FlowLayout());
-        JButton refreshBtn = new JButton("Refresh History");
-        JButton replayBtn = new JButton("Replay Commands");
+        JButton refreshBtn = new JButton("Refresh");
+        JButton replayBtn = new JButton("Replay Battle");
         JButton clearBtn = new JButton("Clear History");
+        JButton exportBtn = new JButton("Export Battle");
         
-        refreshBtn.addActionListener(e -> refreshHistory());
-        replayBtn.addActionListener(e -> replayHistory());
-        clearBtn.addActionListener(e -> clearHistory());
+        refreshBtn.addActionListener(e -> refreshBattleHistory());
+        replayBtn.addActionListener(e -> replaySelectedBattle());
+        clearBtn.addActionListener(e -> clearBattleHistory());
+        exportBtn.addActionListener(e -> exportSelectedBattle());
         
         buttonPanel.add(refreshBtn);
         buttonPanel.add(replayBtn);
         buttonPanel.add(clearBtn);
+        buttonPanel.add(exportBtn);
         
-        panel.add(historyScroll, BorderLayout.CENTER);
-        panel.add(buttonPanel, BorderLayout.SOUTH);
+        // Instructions
+        JPanel instructionsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        instructionsPanel.add(new JLabel("Double-click battle to see details. Select battle and click 'Replay' for interactive mode."));
+        
+        panel.add(treeScroll, BorderLayout.CENTER);
+        panel.add(buttonPanel, BorderLayout.NORTH);
+        panel.add(instructionsPanel, BorderLayout.SOUTH);
         
         tabbedPane.addTab("History", panel);
     }
@@ -780,9 +846,25 @@ public class SwingView extends View {
         }
         
         combatLogArea.setText("Starting combat...\n");
+        
+        // Create new battle history and link it to combat engine
+        BattleHistory currentBattle = battleHistoryManager.startNewBattle(f1, f2);
+        combatEngine.setCurrentBattle(currentBattle);
+        
+        // Simulate combat - actions will be recorded automatically
         Character winner = combatEngine.simulate(f1, f2);
+        
+        // Set the winner
+        currentBattle.setWinner(winner);
+        
         combatLogArea.append("\nWinner: " + winner.getName() + "\n");
-        refreshHistory();
+        combatLogArea.append("Battle saved to history with " + currentBattle.getActions().size() + " actions.\n");
+        
+        // Clear the battle link
+        combatEngine.setCurrentBattle(null);
+        
+        // Refresh the history display
+        refreshBattleHistory();
     }
 
     private void createArmy() {
@@ -899,6 +981,66 @@ public class SwingView extends View {
             return this;
         }
     }
+    
+    // Battle history tree node classes
+    private static class BattleHistoryNode extends DefaultMutableTreeNode {
+        private final BattleHistory battle;
+        
+        public BattleHistoryNode(BattleHistory battle) {
+            super(battle.getSummary());
+            this.battle = battle;
+        }
+        
+        public BattleHistory getBattle() {
+            return battle;
+        }
+        
+        @Override
+        public String toString() {
+            return "[BATTLE] " + battle.getSummary();
+        }
+    }
+    
+    private static class ActionNode extends DefaultMutableTreeNode {
+        private final BattleAction action;
+        
+        public ActionNode(BattleAction action) {
+            super(action.getFormattedAction());
+            this.action = action;
+        }
+        
+        public BattleAction getAction() {
+            return action;
+        }
+        
+        @Override
+        public String toString() {
+            String modifiable = action.isModifiable() ? "[EDIT]" : "[FIXED]";
+            return modifiable + " " + action.getFormattedAction();
+        }
+    }
+    
+    // Battle history tree cell renderer
+    private static class BattleHistoryTreeRenderer extends DefaultTreeCellRenderer {
+        @Override
+        public Component getTreeCellRendererComponent(JTree tree, Object value,
+                boolean selected, boolean expanded, boolean leaf, int row, boolean hasFocus) {
+            
+            super.getTreeCellRendererComponent(tree, value, selected, expanded, leaf, row, hasFocus);
+            
+            if (value instanceof BattleHistoryNode) {
+                setIcon(null); // Battle icon handled in toString
+            } else if (value instanceof ActionNode) {
+                setIcon(null); // Action icon handled in toString
+                ActionNode actionNode = (ActionNode) value;
+                if (!actionNode.getAction().isModifiable()) {
+                    setForeground(java.awt.Color.GRAY);
+                }
+            }
+            
+            return this;
+        }
+    }
 
     private void applySettings() {
         GameSettings settings = GameSettings.getInstance();
@@ -923,10 +1065,8 @@ public class SwingView extends View {
     }
 
     private void refreshHistory() {
-        historyArea.setText("");
-        for (String command : combatEngine.getCommandHistory().getHistory()) {
-            historyArea.append(command + "\n");
-        }
+        // Old method - now redirects to new system
+        refreshBattleHistory();
     }
 
     private void replayHistory() {
@@ -935,10 +1075,180 @@ public class SwingView extends View {
         combatLogArea.append("--- Replay complete ---\n");
     }
 
-    private void clearHistory() {
-        combatEngine.getCommandHistory().clear();
-        historyArea.setText("");
-        combatLogArea.append("History cleared.\n");
+
+    
+    // New advanced battle history methods
+    private void refreshBattleHistory() {
+        historyRootNode.removeAllChildren();
+        
+        for (BattleHistory battle : battleHistoryManager.getAllBattles()) {
+            BattleHistoryNode battleNode = new BattleHistoryNode(battle);
+            
+            // Add action nodes
+            for (BattleAction action : battle.getActions()) {
+                ActionNode actionNode = new ActionNode(action);
+                battleNode.add(actionNode);
+            }
+            
+            historyRootNode.add(battleNode);
+        }
+        
+        historyTreeModel.reload();
+        
+        // Expand all battles by default
+        for (int i = 0; i < historyRootNode.getChildCount(); i++) {
+            TreePath battlePath = new TreePath(new Object[]{historyRootNode, historyRootNode.getChildAt(i)});
+            battleHistoryTree.expandPath(battlePath);
+        }
+    }
+    
+    private void handleBattleDoubleClick() {
+        TreePath selectionPath = battleHistoryTree.getSelectionPath();
+        if (selectionPath != null) {
+            DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectionPath.getLastPathComponent();
+            
+            if (selectedNode instanceof BattleHistoryNode) {
+                BattleHistory battle = ((BattleHistoryNode) selectedNode).getBattle();
+                showBattleDetails(battle);
+            } else if (selectedNode instanceof ActionNode) {
+                BattleAction action = ((ActionNode) selectedNode).getAction();
+                showActionDetails(action);
+            }
+        }
+    }
+    
+    private void replaySelectedBattle() {
+        TreePath selectionPath = battleHistoryTree.getSelectionPath();
+        if (selectionPath == null) {
+            JOptionPane.showMessageDialog(frame, "Please select a battle to replay", "No Selection", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectionPath.getLastPathComponent();
+        
+        if (!(selectedNode instanceof BattleHistoryNode)) {
+            JOptionPane.showMessageDialog(frame, "Please select a battle (not an action) to replay", "Invalid Selection", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        BattleHistory battle = ((BattleHistoryNode) selectedNode).getBattle();
+        openInteractiveReplay(battle);
+    }
+    
+    private void clearBattleHistory() {
+        int result = JOptionPane.showConfirmDialog(
+            frame,
+            "Are you sure you want to clear all battle history?",
+            "Confirm Clear",
+            JOptionPane.YES_NO_OPTION
+        );
+        
+        if (result == JOptionPane.YES_OPTION) {
+            battleHistoryManager.clearHistory();
+            refreshBattleHistory();
+        }
+    }
+    
+    private void exportSelectedBattle() {
+        TreePath selectionPath = battleHistoryTree.getSelectionPath();
+        if (selectionPath == null) {
+            JOptionPane.showMessageDialog(frame, "Please select a battle to export", "No Selection", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectionPath.getLastPathComponent();
+        
+        if (!(selectedNode instanceof BattleHistoryNode)) {
+            JOptionPane.showMessageDialog(frame, "Please select a battle to export", "Invalid Selection", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        BattleHistory battle = ((BattleHistoryNode) selectedNode).getBattle();
+        exportBattleToText(battle);
+    }
+    
+    private void showBattleDetails(BattleHistory battle) {
+        StringBuilder details = new StringBuilder();
+        details.append("Battle Details\n");
+        details.append("=============\n");
+        details.append("Battle: ").append(battle.getBattleName()).append("\n");
+        details.append("Date: ").append(battle.getFormattedTimestamp()).append("\n");
+        details.append("Fighter 1: ").append(battle.getFighter1().getName()).append("\n");
+        details.append("Fighter 2: ").append(battle.getFighter2().getName()).append("\n");
+        details.append("Winner: ").append(battle.getWinner() != null ? battle.getWinner().getName() : "Unknown").append("\n");
+        details.append("Actions: ").append(battle.getActions().size()).append("\n\n");
+        
+        details.append("Action Details:\n");
+        for (BattleAction action : battle.getActions()) {
+            details.append(action.getFormattedAction()).append("\n");
+        }
+        
+        JTextArea textArea = new JTextArea(details.toString());
+        textArea.setEditable(false);
+        textArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        JScrollPane scrollPane = new JScrollPane(textArea);
+        scrollPane.setPreferredSize(new Dimension(600, 400));
+        
+        JOptionPane.showMessageDialog(frame, scrollPane, "Battle Details", JOptionPane.INFORMATION_MESSAGE);
+    }
+    
+    private void showActionDetails(BattleAction action) {
+        String details = String.format(
+            "Action Details\n" +
+            "Round: %d\n" +
+            "Actor: %s\n" +
+            "Target: %s\n" +
+            "Action: %s\n" +
+            "Damage: %d\n" +
+            "Modifiable: %s\n" +
+            "Description: %s",
+            action.getRound(),
+            action.getActor().getName(),
+            action.getTarget().getName(),
+            action.getActionType(),
+            action.getDamage(),
+            action.isModifiable() ? "Yes" : "No",
+            action.getDescription()
+        );
+        
+        JOptionPane.showMessageDialog(frame, details, "Action Details", JOptionPane.INFORMATION_MESSAGE);
+    }
+    
+    private void openInteractiveReplay(BattleHistory battle) {
+        // Create a new window for interactive replay
+        JFrame replayFrame = new JFrame("Interactive Replay: " + battle.getBattleName());
+        replayFrame.setSize(800, 600);
+        replayFrame.setLocationRelativeTo(frame);
+        
+        // TODO: Implement interactive replay interface
+        JLabel placeholder = new JLabel("<html><center>Interactive Replay Interface<br>Coming Soon!<br><br>This will allow you to:<br>- Step through each action<br>- Modify actions and see results<br>- Save interesting variants</center></html>");
+        placeholder.setHorizontalAlignment(SwingConstants.CENTER);
+        
+        replayFrame.add(placeholder);
+        replayFrame.setVisible(true);
+    }
+    
+    private void exportBattleToText(BattleHistory battle) {
+        StringBuilder export = new StringBuilder();
+        export.append("Battle Export: ").append(battle.getBattleName()).append("\n");
+        export.append("Date: ").append(battle.getFormattedTimestamp()).append("\n");
+        export.append("==========================================\n\n");
+        
+        for (BattleAction action : battle.getActions()) {
+            export.append(action.getFormattedAction()).append("\n");
+        }
+        
+        export.append("\n==========================================\n");
+        export.append("Winner: ").append(battle.getWinner() != null ? battle.getWinner().getName() : "Unknown");
+        
+        JTextArea textArea = new JTextArea(export.toString());
+        textArea.setEditable(true);
+        textArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        textArea.selectAll();
+        JScrollPane scrollPane = new JScrollPane(textArea);
+        scrollPane.setPreferredSize(new Dimension(600, 400));
+        
+        JOptionPane.showMessageDialog(frame, scrollPane, "Export Battle - Copy Text", JOptionPane.INFORMATION_MESSAGE);
     }
 
     @Override
