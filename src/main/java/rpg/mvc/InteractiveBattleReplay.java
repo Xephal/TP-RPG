@@ -2,13 +2,13 @@ package rpg.mvc;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Frame;
 import java.util.List;
 
+import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -45,7 +45,9 @@ public class InteractiveBattleReplay extends JDialog {
     
     // UI Components
     private JTextArea combatDisplay;
-    private JProgressBar progressBar;
+    private JLabel turnLabel;
+    private JProgressBar f1HPBar;
+    private JProgressBar f2HPBar;
     private JButton playPauseBtn;
     private JButton stepBackBtn;
     private JButton stepForwardBtn;
@@ -153,11 +155,11 @@ public class InteractiveBattleReplay extends JDialog {
         panel.setBorder(new TitledBorder("Battle Status"));
         panel.setPreferredSize(new Dimension(200, 0));
         
-        // Progress bar
-        progressBar = new JProgressBar(0, originalBattle.getActions().size());
-        progressBar.setStringPainted(true);
-        progressBar.setString("0 / " + originalBattle.getActions().size());
-        panel.add(progressBar);
+        // Turn counter (sans révéler le total pour créer du suspense)
+        turnLabel = new JLabel("Tour: 0", SwingConstants.CENTER);
+        turnLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
+        turnLabel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        panel.add(turnLabel);
         
         panel.add(Box.createVerticalStrut(10));
         
@@ -166,7 +168,7 @@ public class InteractiveBattleReplay extends JDialog {
         f1Label.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
         panel.add(f1Label);
         
-        JProgressBar f1HPBar = new JProgressBar(0, fighter1MaxHP);
+        f1HPBar = new JProgressBar(0, fighter1MaxHP);
         f1HPBar.setValue(fighter1HP);
         f1HPBar.setStringPainted(true);
         f1HPBar.setString(fighter1HP + " / " + fighter1MaxHP);
@@ -179,7 +181,7 @@ public class InteractiveBattleReplay extends JDialog {
         f2Label.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
         panel.add(f2Label);
         
-        JProgressBar f2HPBar = new JProgressBar(0, fighter2MaxHP);
+        f2HPBar = new JProgressBar(0, fighter2MaxHP);
         f2HPBar.setValue(fighter2HP);
         f2HPBar.setStringPainted(true);
         f2HPBar.setString(fighter2HP + " / " + fighter2MaxHP);
@@ -187,11 +189,6 @@ public class InteractiveBattleReplay extends JDialog {
         panel.add(f2HPBar);
         
         panel.add(Box.createVerticalStrut(10));
-        
-        // Current action details
-        actionDetailsLabel = new JLabel("<html><b>Action Details:</b><br/>Ready to start</html>");
-        actionDetailsLabel.setVerticalAlignment(SwingConstants.TOP);
-        panel.add(actionDetailsLabel);
         
         return panel;
     }
@@ -355,41 +352,26 @@ public class InteractiveBattleReplay extends JDialog {
     }
     
     private void updateDisplay() {
-        // Update progress bar
-        int totalActions = currentBattle.getActions().size();
-        progressBar.setValue(currentActionIndex);
-        progressBar.setString(currentActionIndex + " / " + totalActions);
-        
-        // Update HP bars (need to find them in the status panel)
-        Component[] components = ((JPanel)((JPanel)getContentPane().getComponent(1)).getComponent(1)).getComponents();
-        for (Component comp : components) {
-            if (comp instanceof JProgressBar) {
-                JProgressBar bar = (JProgressBar) comp;
-                if (bar.getMaximum() == fighter1MaxHP) {
-                    bar.setValue(fighter1HP);
-                    bar.setString(fighter1HP + " / " + fighter1MaxHP);
-                    bar.setForeground(fighter1HP > fighter1MaxHP * 0.3 ? Color.GREEN : Color.RED);
-                } else if (bar.getMaximum() == fighter2MaxHP) {
-                    bar.setValue(fighter2HP);
-                    bar.setString(fighter2HP + " / " + fighter2MaxHP);
-                    bar.setForeground(fighter2HP > fighter2MaxHP * 0.3 ? Color.GREEN : Color.RED);
-                }
-            }
+        // Update turn display (juste le tour actuel, pas le total)
+        if (turnLabel != null) {
+            turnLabel.setText("Tour: " + currentActionIndex);
         }
         
-        // Update action details
-        List<BattleAction> actions = currentBattle.getActions();
-        if (currentActionIndex < actions.size()) {
-            BattleAction nextAction = actions.get(currentActionIndex);
-            actionDetailsLabel.setText(String.format(
-                "<html><b>Next Action:</b><br/>%s<br/><b>Damage:</b> %d</html>",
-                nextAction.getActionType(),
-                nextAction.getDamage()));
-        } else {
-            actionDetailsLabel.setText("<html><b>Battle Complete!</b></html>");
+        // Update HP bars with current battle HP
+        if (f1HPBar != null) {
+            f1HPBar.setValue(fighter1HP);
+            f1HPBar.setString(fighter1HP + " / " + fighter1MaxHP);
+            f1HPBar.setForeground(fighter1HP > fighter1MaxHP * 0.3 ? Color.GREEN : Color.RED);
+        }
+        
+        if (f2HPBar != null) {
+            f2HPBar.setValue(fighter2HP);
+            f2HPBar.setString(fighter2HP + " / " + fighter2MaxHP);
+            f2HPBar.setForeground(fighter2HP > fighter2MaxHP * 0.3 ? Color.GREEN : Color.RED);
         }
         
         // Update button states
+        List<BattleAction> actions = currentBattle.getActions();
         stepBackBtn.setEnabled(currentActionIndex > 0);
         stepForwardBtn.setEnabled(currentActionIndex < actions.size());
         playPauseBtn.setEnabled(currentActionIndex < actions.size());
