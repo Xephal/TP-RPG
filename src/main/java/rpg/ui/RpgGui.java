@@ -49,11 +49,40 @@ public class RpgGui {
 
         panel.add(form, BorderLayout.NORTH);
 
-        // Center: log
+        // Center: 3 columns -> Saved list | Combat Log | Results
+        JPanel center = new JPanel(new GridLayout(1, 3, 8, 8));
+
+        // Left: saved characters list
+        DefaultListModel<String> listModel = new DefaultListModel<>();
+        for (Character c : dao.findAll()) {
+            listModel.addElement(c.getDescription() + " -> Power=" + c.getPowerLevel());
+        }
+        JList<String> savedList = new JList<>(listModel);
+        JScrollPane leftScroll = new JScrollPane(savedList);
+        JPanel leftPanel = new JPanel(new BorderLayout());
+        leftPanel.add(new JLabel("Saved"), BorderLayout.NORTH);
+        leftPanel.add(leftScroll, BorderLayout.CENTER);
+
+        // Middle: combat log
         JTextArea logArea = new JTextArea();
         logArea.setEditable(false);
-        JScrollPane scroll = new JScrollPane(logArea);
-        panel.add(scroll, BorderLayout.CENTER);
+        JScrollPane centerScroll = new JScrollPane(logArea);
+        JPanel midPanel = new JPanel(new BorderLayout());
+        midPanel.add(new JLabel("Combat Log"), BorderLayout.NORTH);
+        midPanel.add(centerScroll, BorderLayout.CENTER);
+
+        // Right: results / summary
+        JTextArea resultsArea = new JTextArea();
+        resultsArea.setEditable(false);
+        JScrollPane rightScroll = new JScrollPane(resultsArea);
+        JPanel rightPanel = new JPanel(new BorderLayout());
+        rightPanel.add(new JLabel("Results"), BorderLayout.NORTH);
+        rightPanel.add(rightScroll, BorderLayout.CENTER);
+
+        center.add(leftPanel);
+        center.add(midPanel);
+        center.add(rightPanel);
+        panel.add(center, BorderLayout.CENTER);
 
         // Bottom: buttons
         JPanel buttons = new JPanel();
@@ -76,8 +105,10 @@ public class RpgGui {
                     Character opp = opponentBox.getSelectedItem().equals("Alice") ? alice : bob;
                     String log = Combat.simulateWithLog(custom, opp);
                     logArea.setText(log);
+                    resultsArea.setText("Last fight: " + custom.getName() + " vs " + opp.getName() + "\nWinner: " + (log.contains("Winner:") ? log.substring(log.lastIndexOf("Winner:")) : "n/a"));
                 } catch (Exception ex) {
                     logArea.setText("Error: " + ex.getMessage());
+                    resultsArea.setText("Error");
                 }
             }
         });
@@ -96,9 +127,16 @@ public class RpgGui {
                     Character decorated = new Invisibility(custom);
                     decorated = new FireResistance(decorated);
                     dao.save(decorated);
-                    logArea.setText("Saved: " + decorated.getDescription() + "\nTotal saved: " + dao.findAll().size());
+                    // refresh saved list
+                    listModel.clear();
+                    for (Character c : dao.findAll()) {
+                        listModel.addElement(c.getDescription() + " -> Power=" + c.getPowerLevel());
+                    }
+                    logArea.setText("Saved: " + decorated.getDescription());
+                    resultsArea.setText("Total saved: " + dao.findAll().size());
                 } catch (Exception ex) {
                     logArea.setText("Error: " + ex.getMessage());
+                    resultsArea.setText("Error");
                 }
             }
         });
