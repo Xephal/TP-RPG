@@ -1,8 +1,11 @@
 package rpg.mvc;
 
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
+import javax.swing.tree.*;
 import rpg.builder.InvalidCharacterException;
 import rpg.composite.Army;
 import rpg.core.Character;
@@ -37,8 +40,9 @@ public class SwingView extends View {
     private JSpinner maxStatPointsSpinner, maxCharactersSpinner, maxGroupsSpinner;
     
     // Army Management
-    private JList<Army> armyList;
-    private DefaultListModel<Army> armyListModel;
+    private JTree hierarchyTree;
+    private DefaultTreeModel treeModel;
+    private DefaultMutableTreeNode rootNode;
     private JTextField armyNameField;
     
     // Command History
@@ -261,28 +265,213 @@ public class SwingView extends View {
     private void createArmyTab() {
         JPanel panel = new JPanel(new BorderLayout());
         
-        // Army creation
-        JPanel createPanel = new JPanel(new FlowLayout());
-        createPanel.setBorder(new TitledBorder("Create Army"));
+        // Top panel with creation controls
+        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        topPanel.setBorder(new TitledBorder("Army Management"));
         
         armyNameField = new JTextField(15);
         JButton createArmyBtn = new JButton("Create Army");
-        createArmyBtn.addActionListener(e -> createArmy());
+        JButton createPartyBtn = new JButton("Add Party");
+        JButton addCharacterBtn = new JButton("Add Character");
+        JButton removeBtn = new JButton("Remove Selected");
         
-        createPanel.add(new JLabel("Army Name:"));
-        createPanel.add(armyNameField);
-        createPanel.add(createArmyBtn);
+        createArmyBtn.addActionListener(e -> createArmyInTree());
+        createPartyBtn.addActionListener(e -> addPartyToSelected());
+        addCharacterBtn.addActionListener(e -> addCharacterToSelected());
+        removeBtn.addActionListener(e -> removeSelectedNode());
         
-        // Army list
-        armyListModel = new DefaultListModel<>();
-        armyList = new JList<>(armyListModel);
-        JScrollPane armyScroll = new JScrollPane(armyList);
-        armyScroll.setBorder(new TitledBorder("Armies"));
+        topPanel.add(new JLabel("Army Name:"));
+        topPanel.add(armyNameField);
+        topPanel.add(createArmyBtn);
+        topPanel.add(new JSeparator(SwingConstants.VERTICAL));
+        topPanel.add(createPartyBtn);
+        topPanel.add(addCharacterBtn);
+        topPanel.add(removeBtn);
         
-        panel.add(createPanel, BorderLayout.NORTH);
-        panel.add(armyScroll, BorderLayout.CENTER);
+        // Create the tree
+        rootNode = new DefaultMutableTreeNode("Armies");
+        treeModel = new DefaultTreeModel(rootNode);
+        hierarchyTree = new JTree(treeModel);
+        
+        // Configure tree appearance
+        hierarchyTree.setRootVisible(false); // Hide root to show armies as top level
+        hierarchyTree.setShowsRootHandles(true);
+        hierarchyTree.setEditable(false);
+        
+        // Custom cell renderer for different node types
+        hierarchyTree.setCellRenderer(new CustomTreeCellRenderer());
+        
+        // Add mouse listener for double-click actions
+        hierarchyTree.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    handleDoubleClick();
+                }
+            }
+        });
+        
+        JScrollPane treeScroll = new JScrollPane(hierarchyTree);
+        treeScroll.setBorder(new TitledBorder("Army Hierarchy"));
+        
+        // Instructions panel
+        JPanel instructionsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        instructionsPanel.add(new JLabel("Double-click to expand/collapse. Right-click for context menu."));
+        
+        panel.add(topPanel, BorderLayout.NORTH);
+        panel.add(treeScroll, BorderLayout.CENTER);
+        panel.add(instructionsPanel, BorderLayout.SOUTH);
         
         tabbedPane.addTab("Armies", panel);
+    }
+    
+    // Tree management methods
+    private void createArmyInTree() {
+        String name = armyNameField.getText().trim();
+        if (name.isEmpty()) {
+            JOptionPane.showMessageDialog(frame, "Please enter army name", "Input Error", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        Army army = new Army(name);
+        ArmyTreeNode armyNode = new ArmyTreeNode(army);
+        rootNode.add(armyNode);
+        treeModel.reload(rootNode);
+        
+        // Expand the root to show the new army
+        hierarchyTree.expandPath(new TreePath(rootNode.getPath()));
+        
+        armyNameField.setText("");
+        eventBus.notifyObservers("ARMY_CREATED", army.getName());
+    }
+    
+    private void addPartyToSelected() {
+        TreePath selectionPath = hierarchyTree.getSelectionPath();
+        if (selectionPath == null) {
+            JOptionPane.showMessageDialog(frame, "Please select an Army to add a Party to", "No Selection", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectionPath.getLastPathComponent();
+        
+        // Can only add parties to Army nodes
+        if (!(selectedNode instanceof ArmyTreeNode)) {
+            JOptionPane.showMessageDialog(frame, "Parties can only be added to Armies", "Invalid Selection", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        String partyName = JOptionPane.showInputDialog(frame, "Enter Party name:", "Create Party", JOptionPane.PLAIN_MESSAGE);
+        if (partyName != null && !partyName.trim().isEmpty()) {
+            PartyTreeNode partyNode = new PartyTreeNode(partyName.trim());
+            selectedNode.add(partyNode);
+            treeModel.reload(selectedNode);
+            
+            // Expand the army to show the new party
+            hierarchyTree.expandPath(selectionPath);
+            
+            // Refresh display to show updated power totals
+            refreshTreeDisplay();
+        }
+    }
+    
+    private void addCharacterToSelected() {
+        TreePath selectionPath = hierarchyTree.getSelectionPath();
+        if (selectionPath == null) {
+            JOptionPane.showMessageDialog(frame, "Please select a Party to add a Character to", "No Selection", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectionPath.getLastPathComponent();
+        
+        // Can only add characters to Party nodes
+        if (!(selectedNode instanceof PartyTreeNode)) {
+            JOptionPane.showMessageDialog(frame, "Characters can only be added to Parties", "Invalid Selection", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        // Show character selection dialog
+        java.util.List<Character> availableCharacters = dao.findAll();
+        if (availableCharacters.isEmpty()) {
+            JOptionPane.showMessageDialog(frame, "No characters available. Create some characters first!", "No Characters", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        Character[] characters = availableCharacters.toArray(new Character[0]);
+        Character selectedCharacter = (Character) JOptionPane.showInputDialog(
+            frame,
+            "Select a character to add:",
+            "Add Character",
+            JOptionPane.PLAIN_MESSAGE,
+            null,
+            characters,
+            characters[0]
+        );
+        
+        if (selectedCharacter != null) {
+            CharacterTreeNode characterNode = new CharacterTreeNode(selectedCharacter);
+            selectedNode.add(characterNode);
+            treeModel.reload(selectedNode);
+            
+            // Expand the party to show the new character
+            hierarchyTree.expandPath(selectionPath);
+            
+            // Refresh display to show updated power totals
+            refreshTreeDisplay();
+        }
+    }
+    
+    private void removeSelectedNode() {
+        TreePath selectionPath = hierarchyTree.getSelectionPath();
+        if (selectionPath == null) {
+            JOptionPane.showMessageDialog(frame, "Please select a node to remove", "No Selection", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectionPath.getLastPathComponent();
+        
+        // Cannot remove root
+        if (selectedNode == rootNode) {
+            JOptionPane.showMessageDialog(frame, "Cannot remove the root node", "Invalid Operation", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        int result = JOptionPane.showConfirmDialog(
+            frame,
+            "Are you sure you want to remove '" + selectedNode.getUserObject() + "'?",
+            "Confirm Removal",
+            JOptionPane.YES_NO_OPTION
+        );
+        
+        if (result == JOptionPane.YES_OPTION) {
+            DefaultMutableTreeNode parent = (DefaultMutableTreeNode) selectedNode.getParent();
+            parent.remove(selectedNode);
+            treeModel.reload(parent);
+            
+            // Refresh display to show updated power totals
+            refreshTreeDisplay();
+        }
+    }
+    
+    private void handleDoubleClick() {
+        TreePath selectionPath = hierarchyTree.getSelectionPath();
+        if (selectionPath != null) {
+            if (hierarchyTree.isExpanded(selectionPath)) {
+                hierarchyTree.collapsePath(selectionPath);
+            } else {
+                hierarchyTree.expandPath(selectionPath);
+            }
+        }
+    }
+    
+    private void refreshTreeDisplay() {
+        // Force the tree to repaint to show updated power calculations
+        treeModel.reload(rootNode);
+        
+        // Expand all armies by default
+        for (int i = 0; i < rootNode.getChildCount(); i++) {
+            TreePath armyPath = new TreePath(new Object[]{rootNode, rootNode.getChildAt(i)});
+            hierarchyTree.expandPath(armyPath);
+        }
     }
 
     private void createHistoryTab() {
@@ -604,9 +793,111 @@ public class SwingView extends View {
         }
         
         Army army = new Army(name);
-        armyListModel.addElement(army);
+        // Army created but not added to old list anymore
         armyNameField.setText("");
         eventBus.notifyObservers("ARMY_CREATED", army.getName());
+        
+        // Suggest using the new tree interface
+        JOptionPane.showMessageDialog(frame, "Army created! Use the new Army tab for hierarchical management.", "Success", JOptionPane.INFORMATION_MESSAGE);
+    }
+    
+    // Custom tree node classes
+    private static class ArmyTreeNode extends DefaultMutableTreeNode {
+        private final Army army;
+        
+        public ArmyTreeNode(Army army) {
+            super(army.getName());
+            this.army = army;
+        }
+        
+        public Army getArmy() {
+            return army;
+        }
+        
+        @Override
+        public String toString() {
+            int totalPower = calculateTotalPower();
+            return "[ARMY] " + army.getName() + " (" + getChildCount() + " parties, Power: " + totalPower + ")";
+        }
+        
+        private int calculateTotalPower() {
+            int total = 0;
+            for (int i = 0; i < getChildCount(); i++) {
+                Object child = getChildAt(i);
+                if (child instanceof PartyTreeNode) {
+                    total += ((PartyTreeNode) child).calculateTotalPower();
+                }
+            }
+            return total;
+        }
+    }
+    
+    private static class PartyTreeNode extends DefaultMutableTreeNode {
+        private final String partyName;
+        
+        public PartyTreeNode(String partyName) {
+            super(partyName);
+            this.partyName = partyName;
+        }
+        
+        public String getPartyName() {
+            return partyName;
+        }
+        
+        @Override
+        public String toString() {
+            int totalPower = calculateTotalPower();
+            return "[PARTY] " + partyName + " (" + getChildCount() + " characters, Power: " + totalPower + ")";
+        }
+        
+        public int calculateTotalPower() {
+            int total = 0;
+            for (int i = 0; i < getChildCount(); i++) {
+                Object child = getChildAt(i);
+                if (child instanceof CharacterTreeNode) {
+                    total += ((CharacterTreeNode) child).getCharacter().getPowerLevel();
+                }
+            }
+            return total;
+        }
+    }
+    
+    private static class CharacterTreeNode extends DefaultMutableTreeNode {
+        private final Character character;
+        
+        public CharacterTreeNode(Character character) {
+            super(character.getName());
+            this.character = character;
+        }
+        
+        public Character getCharacter() {
+            return character;
+        }
+        
+        @Override
+        public String toString() {
+            return "[CHAR] " + character.getName() + " (Power: " + character.getPowerLevel() + ")";
+        }
+    }
+    
+    // Custom tree cell renderer
+    private static class CustomTreeCellRenderer extends DefaultTreeCellRenderer {
+        @Override
+        public Component getTreeCellRendererComponent(JTree tree, Object value,
+                boolean selected, boolean expanded, boolean leaf, int row, boolean hasFocus) {
+            
+            super.getTreeCellRendererComponent(tree, value, selected, expanded, leaf, row, hasFocus);
+            
+            if (value instanceof ArmyTreeNode) {
+                setIcon(null); // Army icon handled in toString
+            } else if (value instanceof PartyTreeNode) {
+                setIcon(null); // Party icon handled in toString
+            } else if (value instanceof CharacterTreeNode) {
+                setIcon(null); // Character icon handled in toString
+            }
+            
+            return this;
+        }
     }
 
     private void applySettings() {
