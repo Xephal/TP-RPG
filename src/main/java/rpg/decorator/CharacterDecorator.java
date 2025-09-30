@@ -19,4 +19,8 @@ public abstract class CharacterDecorator extends Character {
     public String getDescription() {
         return wrapped.getDescription();
     }
+    
+    public Character getWrappedCharacter() {
+        return wrapped;
+    }
 }

@@ -38,4 +38,17 @@ public class CharacterDAO implements DAO<Character> {
                 .sorted(Comparator.comparing(Character::getName))
                 .collect(Collectors.toList());
     }
+
+    public boolean remove(Character item) {
+        return storage.remove(item);
+    }
+
+    public boolean update(Character oldCharacter, Character newCharacter) {
+        int index = storage.indexOf(oldCharacter);
+        if (index >= 0) {
+            storage.set(index, newCharacter);
+            return true;
+        }
+        return false;
+    }
 }

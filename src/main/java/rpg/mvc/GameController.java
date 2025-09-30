@@ -29,6 +29,15 @@ public class GameController extends Controller {
         return character;
     }
 
+    public Character buildCharacter(String name, int strength, int agility, int intelligence) {
+        CharacterBuilder builder = new CharacterBuilder();
+        return builder.setName(name)
+                .setStrength(strength)
+                .setAgility(agility)
+                .setIntelligence(intelligence)
+                .build();
+    }
+
     public void listCharacters() {
         eventBus.notifyObservers("LIST_CHARACTERS", dao.findAll());
     }

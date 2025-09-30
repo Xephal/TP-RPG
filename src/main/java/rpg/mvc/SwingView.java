@@ -8,6 +8,7 @@ import rpg.composite.Army;
 import rpg.core.Character;
 import rpg.core.CombatEngine;
 import rpg.dao.CharacterDAO;
+import rpg.decorator.CharacterDecorator;
 import rpg.decorator.FireResistance;
 import rpg.decorator.Invisibility;
 import rpg.decorator.Telepathy;
@@ -43,6 +44,20 @@ public class SwingView extends View {
     // Command History
     private JTextArea historyArea;
     private CombatEngine combatEngine;
+    
+    // Character editing state
+    private Character currentEditingCharacter;
+    private boolean isCreatingNew;
+    private Character temporaryCharacter; // For creation with decorators
+    
+    // UI buttons for character management
+    private JButton saveBtn;
+    private JButton cancelBtn;
+    
+    // Decorators checkboxes
+    private JCheckBox invisibilityBox;
+    private JCheckBox fireResistanceBox;
+    private JCheckBox telepathyBox;
 
     public SwingView(GameController controller, EventBus eventBus, CharacterDAO dao) {
         super("SwingView");
@@ -73,65 +88,107 @@ public class SwingView extends View {
     private void createCharacterTab() {
         JPanel panel = new JPanel(new BorderLayout());
         
-        // Creation form
-        JPanel createPanel = new JPanel(new GridBagLayout());
-        createPanel.setBorder(new TitledBorder("Create Character"));
-        GridBagConstraints gbc = new GridBagConstraints();
+        // Left column: Character list
+        JPanel leftPanel = new JPanel(new BorderLayout());
+        leftPanel.setBorder(new TitledBorder("Characters"));
+        leftPanel.setPreferredSize(new Dimension(300, 0));
         
-        gbc.gridx = 0; gbc.gridy = 0; gbc.insets = new Insets(5, 5, 5, 5);
-        createPanel.add(new JLabel("Name:"), gbc);
-        gbc.gridx = 1;
-        nameField = new JTextField(15);
-        createPanel.add(nameField, gbc);
-        
-        gbc.gridx = 0; gbc.gridy = 1;
-        createPanel.add(new JLabel("Strength:"), gbc);
-        gbc.gridx = 1;
-        strSpinner = new JSpinner(new SpinnerNumberModel(5, 0, 30, 1));
-        createPanel.add(strSpinner, gbc);
-        
-        gbc.gridx = 0; gbc.gridy = 2;
-        createPanel.add(new JLabel("Agility:"), gbc);
-        gbc.gridx = 1;
-        agiSpinner = new JSpinner(new SpinnerNumberModel(5, 0, 30, 1));
-        createPanel.add(agiSpinner, gbc);
-        
-        gbc.gridx = 0; gbc.gridy = 3;
-        createPanel.add(new JLabel("Intelligence:"), gbc);
-        gbc.gridx = 1;
-        intSpinner = new JSpinner(new SpinnerNumberModel(5, 0, 30, 1));
-        createPanel.add(intSpinner, gbc);
-        
-        gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 2;
-        JButton createBtn = new JButton("Create Character");
-        createBtn.addActionListener(e -> createCharacter());
-        createPanel.add(createBtn, gbc);
-        
-        // Decorators
-        JPanel decoratorPanel = new JPanel(new FlowLayout());
-        decoratorPanel.setBorder(new TitledBorder("Add Decorators"));
-        JButton invisBtn = new JButton("Add Invisibility");
-        JButton fireBtn = new JButton("Add Fire Resistance");
-        JButton teleBtn = new JButton("Add Telepathy");
-        
-        invisBtn.addActionListener(e -> addDecorator("invisibility"));
-        fireBtn.addActionListener(e -> addDecorator("fire"));
-        teleBtn.addActionListener(e -> addDecorator("telepathy"));
-        
-        decoratorPanel.add(invisBtn);
-        decoratorPanel.add(fireBtn);
-        decoratorPanel.add(teleBtn);
-        
-        // Character list
         characterListModel = new DefaultListModel<>();
         characterList = new JList<>(characterListModel);
         characterList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        JScrollPane listScroll = new JScrollPane(characterList);
-        listScroll.setBorder(new TitledBorder("Characters"));
+        characterList.addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                Character selected = characterList.getSelectedValue();
+                if (selected != null) {
+                    loadCharacterToEdit(selected);
+                }
+            }
+        });
         
-        panel.add(createPanel, BorderLayout.NORTH);
-        panel.add(decoratorPanel, BorderLayout.CENTER);
-        panel.add(listScroll, BorderLayout.SOUTH);
+        JScrollPane listScroll = new JScrollPane(characterList);
+        leftPanel.add(listScroll, BorderLayout.CENTER);
+        
+        JButton addBtn = new JButton("Add New Character");
+        addBtn.addActionListener(e -> startNewCharacterCreation());
+        leftPanel.add(addBtn, BorderLayout.SOUTH);
+        
+        // Right column: Character details/editor
+        JPanel rightPanel = new JPanel(new BorderLayout());
+        rightPanel.setBorder(new TitledBorder("Character Details"));
+        rightPanel.setPreferredSize(new Dimension(400, 0));
+        
+        // Character form
+        JPanel formPanel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        
+        gbc.gridx = 0; gbc.gridy = 0;
+        formPanel.add(new JLabel("Name:"), gbc);
+        gbc.gridx = 1;
+        nameField = new JTextField(15);
+        formPanel.add(nameField, gbc);
+        
+        gbc.gridx = 0; gbc.gridy = 1;
+        formPanel.add(new JLabel("Strength:"), gbc);
+        gbc.gridx = 1;
+        strSpinner = new JSpinner(new SpinnerNumberModel(5, 0, 30, 1));
+        formPanel.add(strSpinner, gbc);
+        
+        gbc.gridx = 0; gbc.gridy = 2;
+        formPanel.add(new JLabel("Agility:"), gbc);
+        gbc.gridx = 1;
+        agiSpinner = new JSpinner(new SpinnerNumberModel(5, 0, 30, 1));
+        formPanel.add(agiSpinner, gbc);
+        
+        gbc.gridx = 0; gbc.gridy = 3;
+        formPanel.add(new JLabel("Intelligence:"), gbc);
+        gbc.gridx = 1;
+        intSpinner = new JSpinner(new SpinnerNumberModel(5, 0, 30, 1));
+        formPanel.add(intSpinner, gbc);
+        
+        rightPanel.add(formPanel, BorderLayout.NORTH);
+        
+        // Action buttons
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        saveBtn = new JButton("Save Character");
+        cancelBtn = new JButton("Cancel");
+        saveBtn.addActionListener(e -> saveCurrentCharacter());
+        cancelBtn.addActionListener(e -> cancelEdit());
+        
+        buttonPanel.add(saveBtn);
+        buttonPanel.add(cancelBtn);
+        
+        // Decorators section
+        JPanel decoratorPanel = new JPanel();
+        decoratorPanel.setLayout(new BoxLayout(decoratorPanel, BoxLayout.Y_AXIS));
+        decoratorPanel.setBorder(new TitledBorder("Decorators"));
+        
+        invisibilityBox = new JCheckBox("Invisibility");
+        fireResistanceBox = new JCheckBox("Fire Resistance");
+        telepathyBox = new JCheckBox("Telepathy");
+        
+        // Add action listeners for immediate application
+        invisibilityBox.addActionListener(e -> updateDecorators());
+        fireResistanceBox.addActionListener(e -> updateDecorators());
+        telepathyBox.addActionListener(e -> updateDecorators());
+        
+        decoratorPanel.add(invisibilityBox);
+        decoratorPanel.add(Box.createVerticalStrut(5));
+        decoratorPanel.add(fireResistanceBox);
+        decoratorPanel.add(Box.createVerticalStrut(5));
+        decoratorPanel.add(telepathyBox);
+        
+        JPanel centerPanel = new JPanel(new BorderLayout());
+        centerPanel.add(buttonPanel, BorderLayout.NORTH);
+        centerPanel.add(decoratorPanel, BorderLayout.CENTER);
+        rightPanel.add(centerPanel, BorderLayout.CENTER);
+        
+        // Add both panels to main panel
+        panel.add(leftPanel, BorderLayout.WEST);
+        panel.add(rightPanel, BorderLayout.CENTER);
+        
+        // Initially clear the right panel
+        clearCharacterForm();
         
         tabbedPane.addTab("Characters", panel);
     }
@@ -256,50 +313,272 @@ public class SwingView extends View {
         tabbedPane.addTab("History", panel);
     }
 
-    private void createCharacter() {
+    private void startNewCharacterCreation() {
+        currentEditingCharacter = null;
+        temporaryCharacter = null;
+        
+        // Clear form first
+        nameField.setText("");
+        strSpinner.setValue(5);
+        agiSpinner.setValue(5);
+        intSpinner.setValue(5);
+        
+        // Clear decorator checkboxes
+        invisibilityBox.setSelected(false);
+        fireResistanceBox.setSelected(false);
+        telepathyBox.setSelected(false);
+        
+        // Then set to creation mode and enable fields
+        isCreatingNew = true;
+        nameField.setEnabled(true);
+        strSpinner.setEnabled(true);
+        agiSpinner.setEnabled(true);
+        intSpinner.setEnabled(true);
+        
+        // Enable decorator checkboxes
+        invisibilityBox.setEnabled(true);
+        fireResistanceBox.setEnabled(true);
+        telepathyBox.setEnabled(true);
+        
+        // Show save/cancel buttons for creation
+        saveBtn.setText("Save Character");
+        saveBtn.setVisible(true);
+        cancelBtn.setVisible(true);
+    }
+
+    private void loadCharacterToEdit(Character character) {
+        isCreatingNew = false;
+        currentEditingCharacter = character;
+        temporaryCharacter = null;
+        
+        nameField.setText(character.getName());
+        strSpinner.setValue(character.getStrength());
+        agiSpinner.setValue(character.getAgility());
+        intSpinner.setValue(character.getIntelligence());
+        
+        // Update decorator checkboxes based on current character
+        updateDecoratorCheckboxes(character);
+        
+        nameField.setEnabled(false); // Can't change name of existing character
+        strSpinner.setEnabled(true);
+        agiSpinner.setEnabled(true);
+        intSpinner.setEnabled(true);
+        
+        // Enable decorator checkboxes
+        invisibilityBox.setEnabled(true);
+        fireResistanceBox.setEnabled(true);
+        telepathyBox.setEnabled(true);
+        
+        // Show update button for editing mode
+        saveBtn.setText("Update Character");
+        saveBtn.setVisible(true);
+        cancelBtn.setVisible(true);
+    }
+
+    private void saveCurrentCharacter() {
         try {
-            String name = nameField.getText().trim();
+            if (isCreatingNew) {
+                if (temporaryCharacter != null) {
+                    // Save the temporary character with all decorators
+                    dao.save(temporaryCharacter);
+                    JOptionPane.showMessageDialog(frame, "Character created successfully with decorators!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    // Create character with selected decorators
+                    String name = nameField.getText().trim();
+                    int str = (Integer) strSpinner.getValue();
+                    int agi = (Integer) agiSpinner.getValue();
+                    int intel = (Integer) intSpinner.getValue();
+                    
+                    if (name.isEmpty()) {
+                        JOptionPane.showMessageDialog(frame, "Please enter a character name", "Validation Error", JOptionPane.WARNING_MESSAGE);
+                        return;
+                    }
+                    
+                    Character baseCharacter = controller.buildCharacter(name, str, agi, intel);
+                    Character characterWithDecorators = applySelectedDecorators(baseCharacter);
+                    dao.save(characterWithDecorators);
+                    JOptionPane.showMessageDialog(frame, "Character created successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                }
+                refreshCharacterList();
+                clearCharacterForm();
+            } else {
+                // Update mode - get current stats and apply decorators
+                int str = (Integer) strSpinner.getValue();
+                int agi = (Integer) agiSpinner.getValue();
+                int intel = (Integer) intSpinner.getValue();
+                
+                // Create updated character with new stats
+                Character baseCharacter = findBaseCharacter(currentEditingCharacter);
+                Character newBaseCharacter = controller.buildCharacter(baseCharacter.getName(), str, agi, intel);
+                
+                // Apply selected decorators
+                Character newCharacterWithDecorators = applySelectedDecorators(newBaseCharacter);
+                
+                // Update in database
+                dao.update(currentEditingCharacter, newCharacterWithDecorators);
+                currentEditingCharacter = newCharacterWithDecorators;
+                
+                JOptionPane.showMessageDialog(frame, "Character updated successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                refreshCharacterList();
+                
+                // Maintain selection after update
+                if (currentEditingCharacter != null) {
+                    for (int i = 0; i < characterListModel.size(); i++) {
+                        Character character = characterListModel.get(i);
+                        if (character.getName().equals(currentEditingCharacter.getName())) {
+                            characterList.setSelectedIndex(i);
+                            loadCharacterToEdit(character);
+                            break;
+                        }
+                    }
+                }
+            }
+            
+        } catch (InvalidCharacterException e) {
+            JOptionPane.showMessageDialog(frame, "Error: " + e.getMessage(), "Save Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void cancelEdit() {
+        clearCharacterForm();
+        characterList.clearSelection();
+    }
+
+    private void clearCharacterForm() {
+        nameField.setText("");
+        strSpinner.setValue(5);
+        agiSpinner.setValue(5);
+        intSpinner.setValue(5);
+        
+        nameField.setEnabled(false);
+        strSpinner.setEnabled(false);
+        agiSpinner.setEnabled(false);
+        intSpinner.setEnabled(false);
+        
+        // Clear and disable decorator checkboxes
+        invisibilityBox.setSelected(false);
+        fireResistanceBox.setSelected(false);
+        telepathyBox.setSelected(false);
+        invisibilityBox.setEnabled(false);
+        fireResistanceBox.setEnabled(false);
+        telepathyBox.setEnabled(false);
+        
+        currentEditingCharacter = null;
+        temporaryCharacter = null;
+        isCreatingNew = false;
+        
+        // Hide save/cancel buttons
+        saveBtn.setVisible(false);
+        cancelBtn.setVisible(false);
+    }
+
+    private void updateDecoratorCheckboxes(Character character) {
+        // Check which decorators are applied
+        boolean hasInvisibility = hasDecorator(character, Invisibility.class);
+        boolean hasFireResistance = hasDecorator(character, FireResistance.class);
+        boolean hasTelepathy = hasDecorator(character, Telepathy.class);
+        
+        // Temporarily disable events to avoid recursive calls
+        invisibilityBox.setSelected(hasInvisibility);
+        fireResistanceBox.setSelected(hasFireResistance);
+        telepathyBox.setSelected(hasTelepathy);
+    }
+    
+    private boolean hasDecorator(Character character, Class<?> decoratorClass) {
+        Character current = character;
+        while (current instanceof CharacterDecorator) {
+            if (decoratorClass.isInstance(current)) {
+                return true;
+            }
+            current = ((CharacterDecorator) current).getWrappedCharacter();
+        }
+        return false;
+    }
+    
+    private void updateDecorators() {
+        if (isCreatingNew) {
+            // For new character creation, update temporary character
+            updateTemporaryCharacterDecorators();
+        } else if (currentEditingCharacter != null) {
+            // For existing character, apply changes immediately
+            updateExistingCharacterDecorators();
+        }
+    }
+    
+    private void updateTemporaryCharacterDecorators() {
+        try {
+            // Create base character if it doesn't exist
+            if (temporaryCharacter == null) {
+                String name = nameField.getText().trim();
+                if (name.isEmpty()) {
+                    JOptionPane.showMessageDialog(frame, "Please enter a character name first", "Name Required", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                int str = (Integer) strSpinner.getValue();
+                int agi = (Integer) agiSpinner.getValue();
+                int intel = (Integer) intSpinner.getValue();
+                
+                temporaryCharacter = controller.buildCharacter(name, str, agi, intel);
+            }
+            
+            // Get base character without decorators
+            Character baseCharacter = findBaseCharacter(temporaryCharacter);
+            
+            // Apply selected decorators
+            Character decoratedCharacter = applySelectedDecorators(baseCharacter);
+            temporaryCharacter = decoratedCharacter;
+            
+        } catch (InvalidCharacterException e) {
+            JOptionPane.showMessageDialog(frame, "Error creating character: " + e.getMessage(), "Creation Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    private void updateExistingCharacterDecorators() {
+        try {
+            // Get base character stats from spinners
             int str = (Integer) strSpinner.getValue();
             int agi = (Integer) agiSpinner.getValue();
             int intel = (Integer) intSpinner.getValue();
             
-            controller.createCharacter(name, str, agi, intel);
-            refreshCharacterList();
+            // Create new base character with current stats
+            Character baseCharacter = findBaseCharacter(currentEditingCharacter);
+            Character newBaseCharacter = controller.buildCharacter(baseCharacter.getName(), str, agi, intel);
             
-            nameField.setText("");
-            strSpinner.setValue(5);
-            agiSpinner.setValue(5);
-            intSpinner.setValue(5);
+            // Apply selected decorators
+            Character newCharacterWithDecorators = applySelectedDecorators(newBaseCharacter);
+            
+            // Update in database
+            dao.update(currentEditingCharacter, newCharacterWithDecorators);
+            currentEditingCharacter = newCharacterWithDecorators;
+            
+            // Update the character list model without losing selection
+            for (int i = 0; i < characterListModel.size(); i++) {
+                Character character = characterListModel.get(i);
+                if (character.getName().equals(newCharacterWithDecorators.getName())) {
+                    characterListModel.set(i, newCharacterWithDecorators);
+                    break;
+                }
+            }
             
         } catch (InvalidCharacterException e) {
-            JOptionPane.showMessageDialog(frame, "Error: " + e.getMessage(), "Creation Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(frame, "Error updating character: " + e.getMessage(), "Update Error", JOptionPane.ERROR_MESSAGE);
         }
     }
-
-    private void addDecorator(String type) {
-        Character selected = characterList.getSelectedValue();
-        if (selected == null) {
-            JOptionPane.showMessageDialog(frame, "Please select a character first", "No Selection", JOptionPane.WARNING_MESSAGE);
-            return;
+    
+    private Character applySelectedDecorators(Character baseCharacter) {
+        Character result = baseCharacter;
+        
+        if (invisibilityBox.isSelected()) {
+            result = new Invisibility(result);
+        }
+        if (fireResistanceBox.isSelected()) {
+            result = new FireResistance(result);
+        }
+        if (telepathyBox.isSelected()) {
+            result = new Telepathy(result);
         }
         
-        Character decorated = selected;
-        switch (type) {
-            case "invisibility":
-                decorated = new Invisibility(selected);
-                break;
-            case "fire":
-                decorated = new FireResistance(selected);
-                break;
-            case "telepathy":
-                decorated = new Telepathy(selected);
-                break;
-        }
-        
-        // Update in DAO
-        dao.save(decorated);
-        refreshCharacterList();
-        eventBus.notifyObservers("DECORATOR_APPLIED", decorated.getDescription());
+        return result;
     }
 
     private void startCombat() {
@@ -408,5 +687,50 @@ public class SwingView extends View {
                     break;
             }
         });
+    }
+    
+    private Character findBaseCharacter(Character character) {
+        // Strip all decorators to find the base character
+        Character current = character;
+        while (current instanceof CharacterDecorator) {
+            current = ((CharacterDecorator) current).getWrappedCharacter();
+        }
+        return current;
+    }
+    
+    private Character reapplyDecorators(Character originalDecorated, Character newBase) {
+        // Get the decorator chain from the original character
+        java.util.List<String> decorators = new java.util.ArrayList<>();
+        Character current = originalDecorated;
+        
+        while (current instanceof CharacterDecorator) {
+            CharacterDecorator decorator = (CharacterDecorator) current;
+            if (decorator instanceof Invisibility) {
+                decorators.add(0, "invisibility");
+            } else if (decorator instanceof FireResistance) {
+                decorators.add(0, "fire");
+            } else if (decorator instanceof Telepathy) {
+                decorators.add(0, "telepathy");
+            }
+            current = decorator.getWrappedCharacter();
+        }
+        
+        // Reapply decorators to new base
+        Character result = newBase;
+        for (String decoratorType : decorators) {
+            switch (decoratorType) {
+                case "invisibility":
+                    result = new Invisibility(result);
+                    break;
+                case "fire":
+                    result = new FireResistance(result);
+                    break;
+                case "telepathy":
+                    result = new Telepathy(result);
+                    break;
+            }
+        }
+        
+        return result;
     }
 }
