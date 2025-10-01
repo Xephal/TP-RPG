@@ -47,7 +47,6 @@ import rpg.builder.InvalidCharacterException;
 import rpg.composite.Army;
 import rpg.core.Character;
 import rpg.core.CombatEngine;
-import rpg.dao.CharacterDAO;
 import rpg.dao.DAO;
 import rpg.decorator.CharacterDecorator;
 import rpg.decorator.FireResistance;
@@ -174,7 +173,7 @@ public class SwingView extends View {
             clearCharacterForm();
             deleteBtn.setEnabled(false);
 
-            // ➡️ Supprimer aussi du tree "Armies"
+            // Supprimer aussi du tree "Armies"
             removeCharacterFromArmyTree(selected);
 
             JOptionPane.showMessageDialog(frame, "Character deleted.", "Delete", JOptionPane.INFORMATION_MESSAGE);
