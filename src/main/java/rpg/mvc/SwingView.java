@@ -1,6 +1,7 @@
 package rpg.mvc;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -11,6 +12,7 @@ import java.awt.Insets;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
+import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
@@ -22,6 +24,7 @@ import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JSpinner;
@@ -33,6 +36,7 @@ import javax.swing.ListSelectionModel;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 import javax.swing.border.TitledBorder;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
@@ -72,6 +76,16 @@ public class SwingView extends View {
     // Combat
     private JComboBox<Character> fighter1Combo, fighter2Combo;
     private JTextArea combatLogArea;
+    private JLabel liveTurnLabel;
+    private JProgressBar liveFighter1HPBar;
+    private JProgressBar liveFighter2HPBar;
+    private int liveFighter1HP, liveFighter2HP;
+    private int liveFighter1MaxHP, liveFighter2MaxHP;
+    private int currentTurn = 0;
+    private Timer liveAnimationTimer;
+    private BattleHistory liveBattleHistory;
+    private int currentActionIndex = 0;
+    private boolean isAnimatingCombat = false;
     
     // Settings
     private JSpinner maxStatPointsSpinner, maxCharactersSpinner, maxGroupsSpinner;
@@ -309,17 +323,71 @@ public class SwingView extends View {
         setupPanel.add(fighter2Combo);
         setupPanel.add(fightBtn);
         
-        // Combat log
-        combatLogArea = new JTextArea(20, 60);
+        // Create layout similar to InteractiveBattleReplay
+        JPanel centerPanel = new JPanel(new BorderLayout());
+        
+        // Combat display (left side) - style noir/vert comme le replay
+        combatLogArea = new JTextArea(20, 50);
         combatLogArea.setEditable(false);
         combatLogArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        combatLogArea.setBackground(Color.BLACK);
+        combatLogArea.setForeground(Color.GREEN);
         JScrollPane logScroll = new JScrollPane(combatLogArea);
-        logScroll.setBorder(new TitledBorder("Combat Log"));
+        logScroll.setBorder(new TitledBorder("Combat Replay"));
+        
+        // Status panel (right side) - identique au replay
+        JPanel statusPanel = createLiveBattleStatusPanel();
+        
+        centerPanel.add(logScroll, BorderLayout.CENTER);
+        centerPanel.add(statusPanel, BorderLayout.EAST);
         
         panel.add(setupPanel, BorderLayout.NORTH);
-        panel.add(logScroll, BorderLayout.CENTER);
+        panel.add(centerPanel, BorderLayout.CENTER);
         
         tabbedPane.addTab("Combat", panel);
+    }
+    
+    private JPanel createLiveBattleStatusPanel() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBorder(new TitledBorder("Battle Status"));
+        panel.setPreferredSize(new Dimension(200, 0));
+        
+        // Turn counter (sans révéler le total pour créer du suspense)
+        liveTurnLabel = new JLabel("Tour: 0", SwingConstants.CENTER);
+        liveTurnLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
+        liveTurnLabel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        panel.add(liveTurnLabel);
+        
+        panel.add(Box.createVerticalStrut(10));
+        
+        // Fighter 1 HP
+        JLabel f1Label = new JLabel("Fighter 1:");
+        f1Label.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
+        panel.add(f1Label);
+        
+        liveFighter1HPBar = new JProgressBar(0, 100);
+        liveFighter1HPBar.setValue(100);
+        liveFighter1HPBar.setStringPainted(true);
+        liveFighter1HPBar.setString("100 / 100");
+        liveFighter1HPBar.setForeground(Color.GREEN);
+        panel.add(liveFighter1HPBar);
+        
+        panel.add(Box.createVerticalStrut(5));
+        
+        // Fighter 2 HP
+        JLabel f2Label = new JLabel("Fighter 2:");
+        f2Label.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
+        panel.add(f2Label);
+        
+        liveFighter2HPBar = new JProgressBar(0, 100);
+        liveFighter2HPBar.setValue(100);
+        liveFighter2HPBar.setStringPainted(true);
+        liveFighter2HPBar.setString("100 / 100");
+        liveFighter2HPBar.setForeground(Color.GREEN);
+        panel.add(liveFighter2HPBar);
+        
+        return panel;
     }
 
     private void createSettingsTab() {
@@ -916,26 +984,87 @@ public class SwingView extends View {
             return;
         }
         
-        combatLogArea.setText("Starting combat...\n");
+        // Initialize the live battle interface (style comme le replay)
+        initializeLiveBattle(f1, f2);
         
-        // Create new battle history and link it to combat engine
-        BattleHistory currentBattle = battleHistoryManager.startNewBattle(f1, f2);
-        combatEngine.setCurrentBattle(currentBattle);
+        // Create new battle history and simulate combat (but don't display yet)
+        liveBattleHistory = battleHistoryManager.startNewBattle(f1, f2);
+        combatEngine.setCurrentBattle(liveBattleHistory);
         
-        // Simulate combat - actions will be recorded automatically
+        // Simulate combat completely (to get all actions)
         Character winner = combatEngine.simulate(f1, f2);
-        
-        // Set the winner
-        currentBattle.setWinner(winner);
-        
-        combatLogArea.append("\nWinner: " + winner.getName() + "\n");
-        combatLogArea.append("Battle saved to history with " + currentBattle.getActions().size() + " actions.\n");
+        liveBattleHistory.setWinner(winner);
         
         // Clear the battle link
         combatEngine.setCurrentBattle(null);
         
+        // Start progressive animation of the battle
+        startLiveBattleAnimation();
+        
         // Refresh the history display
         refreshBattleHistory();
+    }
+    
+    private void initializeLiveBattle(Character f1, Character f2) {
+        // Clear and setup the combat log avec style replay
+        combatLogArea.setText("Starting battle replay...\n");
+        combatLogArea.setCaretPosition(combatLogArea.getDocument().getLength());
+        
+        // Initialize HP values (same formula as CombatEngine)
+        liveFighter1MaxHP = Math.max(10, f1.getStrength() * 10 + f1.getIntelligence() * 2);
+        liveFighter2MaxHP = Math.max(10, f2.getStrength() * 10 + f2.getIntelligence() * 2);
+        liveFighter1HP = liveFighter1MaxHP;
+        liveFighter2HP = liveFighter2MaxHP;
+        
+        // Setup HP bars with fighter names
+        liveFighter1HPBar.setMaximum(liveFighter1MaxHP);
+        liveFighter1HPBar.setValue(liveFighter1HP);
+        liveFighter1HPBar.setString(liveFighter1HP + " / " + liveFighter1MaxHP);
+        liveFighter1HPBar.setForeground(Color.GREEN);
+        
+        liveFighter2HPBar.setMaximum(liveFighter2MaxHP);
+        liveFighter2HPBar.setValue(liveFighter2HP);
+        liveFighter2HPBar.setString(liveFighter2HP + " / " + liveFighter2MaxHP);
+        liveFighter2HPBar.setForeground(Color.GREEN);
+        
+        // Reset turn counter
+        currentTurn = 0;
+        liveTurnLabel.setText("Tour: " + currentTurn);
+    }
+    
+    private void updateLiveBattleStatus(String actionDescription) {
+        // Update turn counter
+        liveTurnLabel.setText("Tour: " + currentTurn);
+        
+        // Extract HP values from action description 
+        // Format: "Q attacks C for 5 damage (hpA=55, hpB=51)"
+        if (actionDescription.contains("hpA=") && actionDescription.contains("hpB=")) {
+            try {
+                // Extract hpA
+                int hpAStart = actionDescription.indexOf("hpA=") + 4;
+                int hpAEnd = actionDescription.indexOf(",", hpAStart);
+                if (hpAEnd == -1) hpAEnd = actionDescription.indexOf(")", hpAStart);
+                liveFighter1HP = Integer.parseInt(actionDescription.substring(hpAStart, hpAEnd));
+                
+                // Extract hpB  
+                int hpBStart = actionDescription.indexOf("hpB=") + 4;
+                int hpBEnd = actionDescription.indexOf(")", hpBStart);
+                liveFighter2HP = Integer.parseInt(actionDescription.substring(hpBStart, hpBEnd));
+                
+                // Update HP bars
+                liveFighter1HPBar.setValue(liveFighter1HP);
+                liveFighter1HPBar.setString(liveFighter1HP + " / " + liveFighter1MaxHP);
+                liveFighter1HPBar.setForeground(liveFighter1HP > liveFighter1MaxHP * 0.3 ? Color.GREEN : Color.RED);
+                
+                liveFighter2HPBar.setValue(liveFighter2HP);
+                liveFighter2HPBar.setString(liveFighter2HP + " / " + liveFighter2MaxHP);
+                liveFighter2HPBar.setForeground(liveFighter2HP > liveFighter2MaxHP * 0.3 ? Color.GREEN : Color.RED);
+                
+            } catch (NumberFormatException | StringIndexOutOfBoundsException e) {
+                // Si l'extraction échoue, on continue sans mettre à jour les HP
+                System.err.println("Could not extract HP from: " + actionDescription);
+            }
+        }
     }
 
     private void createArmy() {
@@ -1173,6 +1302,130 @@ public class SwingView extends View {
         }
     }
     
+    private void startLiveBattleAnimation() {
+        if (liveBattleHistory == null || liveBattleHistory.getActions().isEmpty()) {
+            combatLogArea.append("No actions to display.\n");
+            return;
+        }
+        
+        // Stop any existing animation
+        if (liveAnimationTimer != null && liveAnimationTimer.isRunning()) {
+            liveAnimationTimer.stop();
+        }
+        
+        // Set flag to ignore Observer events during animation
+        isAnimatingCombat = true;
+        
+        // Clear the combat log
+        combatLogArea.setText("");
+        
+        // Reset animation state
+        currentActionIndex = 0;
+        liveFighter1HP = liveFighter1MaxHP;
+        liveFighter2HP = liveFighter2MaxHP;
+        currentTurn = 0;
+        
+        // Update initial HP bars
+        updateLiveBattleHP();
+        
+        // Start animation timer (1 second delay between actions)
+        liveAnimationTimer = new Timer(1000, e -> {
+            if (currentActionIndex < liveBattleHistory.getActions().size()) {
+                displayNextLiveAction();
+                currentActionIndex++;
+            } else {
+                // Animation finished
+                liveAnimationTimer.stop();
+                
+                // Display winner
+                Character winner = liveBattleHistory.getWinner();
+                if (winner != null) {
+                    combatLogArea.append("\n=== Winner: " + winner.getName() + " ===\n");
+                }
+                combatLogArea.append("Battle saved to history with " + liveBattleHistory.getActions().size() + " actions.\n");
+                
+                // Re-enable Observer events
+                isAnimatingCombat = false;
+            }
+        });
+        
+        liveAnimationTimer.start();
+    }
+    
+    private void displayNextLiveAction() {
+        if (currentActionIndex >= liveBattleHistory.getActions().size()) {
+            return;
+        }
+        
+        BattleAction action = liveBattleHistory.getActions().get(currentActionIndex);
+        
+        // Update turn counter if necessary
+        if (action.getRound() > currentTurn) {
+            currentTurn = action.getRound();
+            liveTurnLabel.setText("Turn " + currentTurn);
+        }
+        
+        // Display the action in combat log
+        String actionText = "Turn " + action.getRound() + ": " + action.getDescription();
+        combatLogArea.append(actionText + "\n");
+        combatLogArea.setCaretPosition(combatLogArea.getDocument().getLength());
+        
+        // Update HP based on action type
+        updateLiveActionHP(action);
+        
+        // Update HP bars
+        updateLiveBattleHP();
+    }
+    
+    private void updateLiveActionHP(BattleAction action) {
+        // Use the damage directly from the action
+        int damage = action.getDamage();
+        
+        if (damage > 0) {
+            // Determine which fighter took damage based on target
+            Character target = action.getTarget();
+            
+            if (target.getName().equals(liveBattleHistory.getFighter1().getName())) {
+                // Fighter1 takes damage
+                liveFighter1HP = Math.max(0, liveFighter1HP - damage);
+            } else if (target.getName().equals(liveBattleHistory.getFighter2().getName())) {
+                // Fighter2 takes damage
+                liveFighter2HP = Math.max(0, liveFighter2HP - damage);
+            }
+        }
+    }
+    
+    private void updateLiveBattleHP() {
+        // Update HP bars with current HP values
+        if (liveFighter1HPBar != null && liveFighter2HPBar != null) {
+            // Set the actual HP values (not percentages)
+            liveFighter1HPBar.setValue(liveFighter1HP);
+            liveFighter2HPBar.setValue(liveFighter2HP);
+            
+            // Update HP text
+            liveFighter1HPBar.setString(liveFighter1HP + "/" + liveFighter1MaxHP + " HP");
+            liveFighter2HPBar.setString(liveFighter2HP + "/" + liveFighter2MaxHP + " HP");
+            
+            // Calculate percentages for color determination
+            int hp1Percentage = liveFighter1MaxHP > 0 ? (liveFighter1HP * 100) / liveFighter1MaxHP : 0;
+            int hp2Percentage = liveFighter2MaxHP > 0 ? (liveFighter2HP * 100) / liveFighter2MaxHP : 0;
+            
+            // Update colors based on HP percentage
+            liveFighter1HPBar.setForeground(getHPColor(hp1Percentage));
+            liveFighter2HPBar.setForeground(getHPColor(hp2Percentage));
+        }
+    }
+    
+    private Color getHPColor(int hpPercentage) {
+        if (hpPercentage > 60) {
+            return new Color(0, 200, 0); // Vert vif
+        } else if (hpPercentage > 30) {
+            return new Color(255, 200, 0); // Jaune/orange
+        } else {
+            return new Color(220, 0, 0); // Rouge
+        }
+    }
+    
     private void handleBattleDoubleClick() {
         TreePath selectionPath = battleHistoryTree.getSelectionPath();
         if (selectionPath != null) {
@@ -1342,13 +1595,31 @@ public class SwingView extends View {
                     refreshCharacterList();
                     break;
                 case "COMBAT_ACTION":
-                    combatLogArea.append(data.toString() + "\n");
+                    // Ignore combat actions during animation (will be displayed progressively)
+                    if (isAnimatingCombat) {
+                        return;
+                    }
+                    // Format the action like in the replay (with turn number)
+                    currentTurn++;
+                    String actionText = "[" + currentTurn + "] " + data.toString();
+                    combatLogArea.append(actionText + "\n");
                     combatLogArea.setCaretPosition(combatLogArea.getDocument().getLength());
+                    
+                    // Update HP bars and turn counter (extract HP from action text)
+                    updateLiveBattleStatus(data.toString());
                     break;
                 case "COMBAT_START":
+                    // Ignore combat start during animation
+                    if (isAnimatingCombat) {
+                        return;
+                    }
                     combatLogArea.append("=== " + data.toString() + " ===\n");
                     break;
                 case "COMBAT_END":
+                    // Ignore combat end during animation
+                    if (isAnimatingCombat) {
+                        return;
+                    }
                     combatLogArea.append("=== " + data.toString() + " ===\n");
                     break;
                 default:
