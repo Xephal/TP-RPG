@@ -472,53 +472,44 @@ public class InteractiveBattleReplay extends JDialog {
     }
     
     private void smoothUpdateFromModification(int modifiedActionIndex) {
-        System.out.println("Setting up for manual navigation from action " + (modifiedActionIndex + 1));
+        System.out.println("Timeline modified at action " + (modifiedActionIndex + 1) + ". Ready for manual replay.");
         
-        // Keep everything before the modification exactly as it was
-        // Update ALL lines from the modification point onward with new HP values
+        // Reset HP to initial state
+        initializeCharacterStats();
         
-        String currentText = combatDisplay.getText();
-        String[] lines = currentText.split("\n");
+        // DON'T display everything automatically - just clear and reset to modification point
+        combatDisplay.setText("Starting battle replay...\n");
         
-        // Build new text: keep lines before modification, update from modification onward
-        StringBuilder newText = new StringBuilder();
-        
-        // Always keep the header
-        newText.append("Starting battle replay...").append("\n");
-        
-        // Keep all action lines before the modification exactly as they were
-        // Note: lines[0] is header, so action i is at lines[i+1]
-        for (int i = 0; i < modifiedActionIndex; i++) {
-            int lineIndex = i + 1; // +1 because lines[0] is the header
-            if (lineIndex < lines.length) {
-                newText.append(lines[lineIndex]).append("\n");
-            }
-        }
-        
-        // Now update ALL lines from the modification point onward with correct HP values
+        // Display actions up to AND INCLUDING the modified action
+        // AND apply them to update HP correctly
         List<BattleAction> actions = currentBattle.getActions();
-        for (int i = modifiedActionIndex; i < actions.size(); i++) {
+        for (int i = 0; i <= modifiedActionIndex && i < actions.size(); i++) {
             BattleAction action = actions.get(i);
             if (action != null) {
-                newText.append("[").append(i + 1).append("] ").append(action.getDescription()).append("\n");
+                combatDisplay.append("[" + (i + 1) + "] " + action.getDescription() + "\n");
+                
+                // Apply the action to update HP
+                applyActionToHP(action);
             }
         }
         
-        // Set the complete updated text
-        combatDisplay.setText(newText.toString());
+        // Set current position to AFTER the modification (so Play continues from there)
+        currentActionIndex = modifiedActionIndex + 1;
         
-        // Set current position to show all the updated content
-        currentActionIndex = actions.size();
-        
-        // Update display elements
+        // Update HP bars to the state at this point (after applying the modified action)
         updateDisplay();
         
-        // Auto-scroll to the modified line
+        // Auto-scroll to show current position
         combatDisplay.setCaretPosition(combatDisplay.getDocument().getLength());
         
-        // Set status to indicate the update is complete
-        int updatedActions = actions.size() - modifiedActionIndex;
-        statusLabel.setText("Timeline updated! " + updatedActions + " actions recalculated. Use Step Back/Forward to navigate.");
+        // Set status to indicate user can press Play to continue
+        int remainingActions = actions.size() - currentActionIndex;
+        statusLabel.setText("Timeline updated! " + remainingActions + " actions remain. Press ▶ Play to see the new timeline.");
+        
+        // Stop any current playback
+        if (isPlaying) {
+            pauseReplay();
+        }
     }
     
     private void applyActionToHP(BattleAction action) {
