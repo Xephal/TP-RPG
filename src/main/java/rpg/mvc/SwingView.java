@@ -44,6 +44,7 @@ import rpg.composite.Army;
 import rpg.core.Character;
 import rpg.core.CombatEngine;
 import rpg.dao.CharacterDAO;
+import rpg.dao.DAO;
 import rpg.decorator.CharacterDecorator;
 import rpg.decorator.FireResistance;
 import rpg.decorator.Invisibility;
@@ -57,7 +58,7 @@ import rpg.settings.GameSettings;
 public class SwingView extends View {
     private final GameController controller;
     private final EventBus eventBus;
-    private final CharacterDAO dao;
+    private final DAO<Character> dao;
     
     private JFrame frame;
     private JTabbedPane tabbedPane;
@@ -96,13 +97,16 @@ public class SwingView extends View {
     // UI buttons for character management
     private JButton saveBtn;
     private JButton cancelBtn;
-    
+    // Character Management (ajoute cette ligne)
+    private JButton deleteBtn;
+
+
     // Decorators checkboxes
     private JCheckBox invisibilityBox;
     private JCheckBox fireResistanceBox;
     private JCheckBox telepathyBox;
 
-    public SwingView(GameController controller, EventBus eventBus, CharacterDAO dao) {
+    public SwingView(GameController controller, EventBus eventBus, DAO<Character> dao) {
         super("SwingView");
         this.controller = controller;
         this.eventBus = eventBus;
@@ -129,111 +133,160 @@ public class SwingView extends View {
         frame.add(tabbedPane);
     }
 
+    private void deleteSelectedCharacter() {
+        rpg.core.Character selected = characterList.getSelectedValue();
+        if (selected == null) {
+            JOptionPane.showMessageDialog(frame, "Select a character to delete.", "No Selection", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(
+                frame,
+                "Delete '" + selected.getName() + "' ?",
+                "Confirm Deletion",
+                JOptionPane.YES_NO_OPTION
+        );
+        if (confirm != JOptionPane.YES_OPTION) return;
+
+        try {
+            boolean ok = dao.remove(selected);
+            if (!ok) {
+                JOptionPane.showMessageDialog(frame, "Deletion failed (not found).", "Delete", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // UI refresh
+            refreshCharacterList();
+            clearCharacterForm();
+            deleteBtn.setEnabled(false);
+
+            // ➡️ Supprimer aussi du tree "Armies"
+            removeCharacterFromArmyTree(selected);
+
+            JOptionPane.showMessageDialog(frame, "Character deleted.", "Delete", JOptionPane.INFORMATION_MESSAGE);
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(frame, "Error while deleting: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+
+
     private void createCharacterTab() {
         JPanel panel = new JPanel(new BorderLayout());
-        
+
         // Left column: Character list
         JPanel leftPanel = new JPanel(new BorderLayout());
         leftPanel.setBorder(new TitledBorder("Characters"));
         leftPanel.setPreferredSize(new Dimension(300, 0));
-        
+
         characterListModel = new DefaultListModel<>();
         characterList = new JList<>(characterListModel);
         characterList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         characterList.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
-                Character selected = characterList.getSelectedValue();
+                rpg.core.Character selected = characterList.getSelectedValue();
+                // NEW: activer/désactiver le bouton delete selon la sélection
+                if (deleteBtn != null) {
+                    deleteBtn.setEnabled(selected != null);
+                }
                 if (selected != null) {
                     loadCharacterToEdit(selected);
                 }
             }
         });
-        
+
         JScrollPane listScroll = new JScrollPane(characterList);
         leftPanel.add(listScroll, BorderLayout.CENTER);
-        
+
+        // BOTTOM LEFT: Add + Delete
         JButton addBtn = new JButton("Add New Character");
         addBtn.addActionListener(e -> startNewCharacterCreation());
-        leftPanel.add(addBtn, BorderLayout.SOUTH);
-        
+        JPanel leftBottom = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        deleteBtn = new JButton("Delete Selected");     // NEW
+        deleteBtn.setEnabled(false);                    // NEW: désactivé tant qu’aucune sélection
+        deleteBtn.addActionListener(e -> deleteSelectedCharacter()); // NEW: action de suppression
+        leftBottom.add(addBtn);                         // NEW
+        leftBottom.add(deleteBtn);                      // NEW
+        leftPanel.add(leftBottom, BorderLayout.SOUTH);  // NEW
+
         // Right column: Character details/editor
         JPanel rightPanel = new JPanel(new BorderLayout());
         rightPanel.setBorder(new TitledBorder("Character Details"));
         rightPanel.setPreferredSize(new Dimension(400, 0));
-        
+
         // Character form
         JPanel formPanel = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(5, 5, 5, 5);
-        
+
         gbc.gridx = 0; gbc.gridy = 0;
         formPanel.add(new JLabel("Name:"), gbc);
         gbc.gridx = 1;
         nameField = new JTextField(15);
         formPanel.add(nameField, gbc);
-        
+
         gbc.gridx = 0; gbc.gridy = 1;
         formPanel.add(new JLabel("Strength:"), gbc);
         gbc.gridx = 1;
         strSpinner = new JSpinner(new SpinnerNumberModel(5, 0, 30, 1));
         formPanel.add(strSpinner, gbc);
-        
+
         gbc.gridx = 0; gbc.gridy = 2;
         formPanel.add(new JLabel("Agility:"), gbc);
         gbc.gridx = 1;
         agiSpinner = new JSpinner(new SpinnerNumberModel(5, 0, 30, 1));
         formPanel.add(agiSpinner, gbc);
-        
+
         gbc.gridx = 0; gbc.gridy = 3;
         formPanel.add(new JLabel("Intelligence:"), gbc);
         gbc.gridx = 1;
         intSpinner = new JSpinner(new SpinnerNumberModel(5, 0, 30, 1));
         formPanel.add(intSpinner, gbc);
-        
+
         rightPanel.add(formPanel, BorderLayout.NORTH);
-        
+
         // Action buttons
         JPanel buttonPanel = new JPanel(new FlowLayout());
         saveBtn = new JButton("Save Character");
         cancelBtn = new JButton("Cancel");
         saveBtn.addActionListener(e -> saveCurrentCharacter());
         cancelBtn.addActionListener(e -> cancelEdit());
-        
         buttonPanel.add(saveBtn);
         buttonPanel.add(cancelBtn);
-        
+
         // Decorators section
         JPanel decoratorPanel = new JPanel();
         decoratorPanel.setLayout(new BoxLayout(decoratorPanel, BoxLayout.Y_AXIS));
         decoratorPanel.setBorder(new TitledBorder("Decorators"));
-        
+
         invisibilityBox = new JCheckBox("Invisibility");
         fireResistanceBox = new JCheckBox("Fire Resistance");
         telepathyBox = new JCheckBox("Telepathy");
-        
+
         // Add action listeners for immediate application
         invisibilityBox.addActionListener(e -> updateDecorators());
         fireResistanceBox.addActionListener(e -> updateDecorators());
         telepathyBox.addActionListener(e -> updateDecorators());
-        
+
         decoratorPanel.add(invisibilityBox);
         decoratorPanel.add(Box.createVerticalStrut(5));
         decoratorPanel.add(fireResistanceBox);
         decoratorPanel.add(Box.createVerticalStrut(5));
         decoratorPanel.add(telepathyBox);
-        
+
         JPanel centerPanel = new JPanel(new BorderLayout());
         centerPanel.add(buttonPanel, BorderLayout.NORTH);
         centerPanel.add(decoratorPanel, BorderLayout.CENTER);
         rightPanel.add(centerPanel, BorderLayout.CENTER);
-        
+
         // Add both panels to main panel
         panel.add(leftPanel, BorderLayout.WEST);
         panel.add(rightPanel, BorderLayout.CENTER);
-        
+
         // Initially clear the right panel
         clearCharacterForm();
-        
+
         tabbedPane.addTab("Characters", panel);
     }
 
@@ -301,6 +354,24 @@ public class SwingView extends View {
         
         tabbedPane.addTab("Settings", panel);
     }
+
+    private void removeCharacterFromArmyTree(Character toRemove) {
+        // Parcourt l’arbre et supprime les CharacterTreeNode qui portent ce nom
+        for (int i = 0; i < rootNode.getChildCount(); i++) {
+            DefaultMutableTreeNode armyNode = (DefaultMutableTreeNode) rootNode.getChildAt(i);
+            for (int j = 0; j < armyNode.getChildCount(); j++) {
+                DefaultMutableTreeNode partyNode = (DefaultMutableTreeNode) armyNode.getChildAt(j);
+                for (int k = partyNode.getChildCount() - 1; k >= 0; k--) {
+                    DefaultMutableTreeNode child = (DefaultMutableTreeNode) partyNode.getChildAt(k);
+                    if (child instanceof CharacterTreeNode ctn && ctn.getCharacter().getName().equals(toRemove.getName())) {
+                        partyNode.remove(k);
+                    }
+                }
+            }
+        }
+        treeModel.reload(rootNode);
+    }
+
 
     private void createArmyTab() {
         JPanel panel = new JPanel(new BorderLayout());

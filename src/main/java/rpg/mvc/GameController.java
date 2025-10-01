@@ -4,13 +4,14 @@ import rpg.builder.CharacterBuilder;
 import rpg.command.CommandHistory;
 import rpg.core.Character;
 import rpg.dao.CharacterDAO;
+import rpg.dao.DAO;
 import rpg.observer.EventBus;
 
 public class GameController extends Controller {
-    private final CharacterDAO dao;
     private final CommandHistory commandHistory;
+    private final DAO<Character> dao;   // <-- interface
 
-    public GameController(EventBus eventBus, CharacterDAO dao) {
+    public GameController(EventBus eventBus, DAO<Character> dao) {  // <-- interface
         super(eventBus);
         this.dao = dao;
         this.commandHistory = new CommandHistory();
