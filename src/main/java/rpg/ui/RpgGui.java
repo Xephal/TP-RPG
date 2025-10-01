@@ -3,9 +3,8 @@ package rpg.ui;
 import rpg.builder.CharacterBuilder;
 import rpg.core.Character;
 import rpg.core.Combat;
-import rpg.decorator.Invisibility;
-import rpg.decorator.FireResistance;
-import rpg.decorator.Telepathy;
+import rpg.decorator.Furtivite;
+import rpg.decorator.Surcharge;
 import rpg.dao.CharacterDAO;
 
 import javax.swing.*;
@@ -124,8 +123,8 @@ public class RpgGui {
                 try {
                     Character custom = cb.setName(nm).setStrength(s).setAgility(a).setIntelligence(it).build();
                     // simple decorator demo
-                    Character decorated = new Invisibility(custom);
-                    decorated = new FireResistance(decorated);
+                    Character decorated = new Furtivite(custom);
+                    decorated = new Surcharge(decorated);
                     dao.save(decorated);
                     // refresh saved list
                     listModel.clear();

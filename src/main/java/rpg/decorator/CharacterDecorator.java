@@ -10,17 +10,12 @@ public abstract class CharacterDecorator extends Character {
         this.wrapped = wrapped;
     }
 
-    @Override
-    public int getPowerLevel() {
-        return wrapped.getPowerLevel();
-    }
+    @Override public int getPowerLevel() { return wrapped.getPowerLevel(); }
+    @Override public String getDescription() { return wrapped.getDescription(); }
+    public Character getWrappedCharacter() { return wrapped; }
 
-    @Override
-    public String getDescription() {
-        return wrapped.getDescription();
-    }
-    
-    public Character getWrappedCharacter() {
-        return wrapped;
-    }
+    @Override public void beginTurn() { wrapped.beginTurn(); }
+    @Override public int healThisTurn() { return wrapped.healThisTurn(); }
+    @Override public int attackDamage() { return wrapped.attackDamage(); }
+    @Override public int onReceiveDamage(int dmg) { return wrapped.onReceiveDamage(dmg); }
 }

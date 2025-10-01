@@ -7,9 +7,9 @@ import rpg.core.Character;
 import rpg.core.CombatEngine;
 import rpg.core.Party;
 import rpg.dao.CharacterDAO;
-import rpg.decorator.FireResistance;
-import rpg.decorator.Invisibility;
-import rpg.decorator.Telepathy;
+import rpg.decorator.Surcharge;
+import rpg.decorator.Furtivite;
+import rpg.decorator.Soin;
 import rpg.mvc.ConsoleView;
 import rpg.mvc.GameController;
 import rpg.observer.EventBus;
@@ -33,8 +33,8 @@ public class MainTP2 {
             Character alice = controller.createCharacter("Alice", 8, 6, 8);
             Character bob = controller.createCharacter("Bob", 10, 5, 5);
 
-            alice = new Invisibility(alice);
-            bob = new FireResistance(new Telepathy(bob));
+            alice = new Furtivite(alice);
+            bob = new Surcharge(new Soin(bob));
 
             view.showMessage("\nDecorated characters:");
             view.showMessage("Alice: " + alice.getDescription());

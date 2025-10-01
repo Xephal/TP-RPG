@@ -2,9 +2,9 @@ package rpg.dao;
 
 import rpg.core.Character;
 import rpg.decorator.CharacterDecorator;
-import rpg.decorator.FireResistance;
-import rpg.decorator.Invisibility;
-import rpg.decorator.Telepathy;
+import rpg.decorator.Surcharge;
+import rpg.decorator.Furtivite;
+import rpg.decorator.Soin;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -24,9 +24,9 @@ public class SqliteCharacterDAO implements DAO<Character> {
         List<String> list = new ArrayList<>();
         Character cur = c;
         while (cur instanceof CharacterDecorator) {
-            if (cur instanceof Invisibility) list.add("Invisibility");
-            else if (cur instanceof FireResistance) list.add("FireResistance");
-            else if (cur instanceof Telepathy) list.add("Telepathy");
+            if (cur instanceof Furtivite) list.add("Invisibility");
+            else if (cur instanceof Surcharge) list.add("FireResistance");
+            else if (cur instanceof Soin) list.add("Telepathy");
             cur = ((CharacterDecorator) cur).getWrappedCharacter();
         }
         // on stocke de haut en bas (ordre d’application), ça n’a pas d’importance tant qu’on réapplique dans le même ordre
@@ -46,9 +46,9 @@ public class SqliteCharacterDAO implements DAO<Character> {
         if (decoratorsCsv == null || decoratorsCsv.isBlank()) return base;
         for (String d : decoratorsCsv.split(",")) {
             switch (d.trim()) {
-                case "Invisibility" -> base = new Invisibility(base);
-                case "FireResistance" -> base = new FireResistance(base);
-                case "Telepathy" -> base = new Telepathy(base);
+                case "Invisibility" -> base = new Furtivite(base);
+                case "FireResistance" -> base = new Surcharge(base);
+                case "Telepathy" -> base = new Soin(base);
                 default -> { /* inconnu => ignorer */ }
             }
         }

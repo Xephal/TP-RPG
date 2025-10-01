@@ -7,9 +7,9 @@ import rpg.core.Character;
 import rpg.core.Combat;
 import rpg.core.Party;
 import rpg.dao.CharacterDAO;
-import rpg.decorator.FireResistance;
-import rpg.decorator.Invisibility;
-import rpg.decorator.Telepathy;
+import rpg.decorator.Surcharge;
+import rpg.decorator.Furtivite;
+import rpg.decorator.Soin;
 import rpg.settings.GameSettings;
 import rpg.ui.RpgGui;
 
@@ -27,9 +27,9 @@ public class Main {
             System.out.println("Validation error: " + ex.getMessage());
         }
 
-        alice = new Invisibility(alice);
-        bob = new FireResistance(bob);
-        bob = new Telepathy(bob);
+        alice = new Furtivite(alice);
+        bob = new Surcharge(bob);
+        bob = new Soin(bob);
 
         CharacterDAO dao = new CharacterDAO();
         dao.save(alice);
