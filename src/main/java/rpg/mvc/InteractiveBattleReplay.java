@@ -87,8 +87,8 @@ public class InteractiveBattleReplay extends JDialog {
         Character f2 = originalBattle.getFighter2();
         
         // Calculate initial HP (same formula as CombatEngine)
-        fighter1MaxHP = Math.max(10, f1.getStrength() * 10 + f1.getIntelligence() * 2);
-        fighter2MaxHP = Math.max(10, f2.getStrength() * 10 + f2.getIntelligence() * 2);
+        fighter1MaxHP = 300;
+        fighter2MaxHP = 300;
         
         fighter1HP = fighter1MaxHP;
         fighter2HP = fighter2MaxHP;

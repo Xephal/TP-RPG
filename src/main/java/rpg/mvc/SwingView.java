@@ -1337,18 +1337,28 @@ public class SwingView extends View {
         if (!combatOngoing) return;
 
         setActionButtonsEnabled(false);
-        // Simple AI: if low HP and has heal, sometimes heal; else sometimes Surcharge; else attack
-        boolean enemyHasHeal = hasDecorator(enemyChar, Soin.class);
+
+        boolean enemyHasHeal      = hasDecorator(enemyChar, Soin.class);
         boolean enemyHasSurcharge = hasDecorator(enemyChar, Surcharge.class);
         boolean enemyHasFurtivite = hasDecorator(enemyChar, Furtivite.class);
-        boolean enemyHasBoule = hasDecorator(enemyChar, BouleDeFeu.class);
+        boolean enemyHasBoule     = hasDecorator(enemyChar, BouleDeFeu.class);
 
-// Heal si bas PV et CD prêt
-        if (enemyHasHeal && enemyBuff.cdSoin == 0 && liveFighter2HP <= (liveFighter2MaxHP * 45 / 100) && RNG.nextBoolean()) {
+        // 1) SOIN si PV bas et CD prêt
+        if (enemyHasHeal && enemyBuff.cdSoin == 0
+                && liveFighter2HP <= (liveFighter2MaxHP * 45 / 100)
+                && RNG.nextBoolean()) {
+
             int before = liveFighter2HP;
             liveFighter2HP = Math.min(liveFighter2MaxHP, liveFighter2HP + 30);
-            enemyBuff.cdSoin = 4;
-            logLine(enemyChar.getName() + " se soigne de " + (liveFighter2HP - before) + " PV.");
+            int healed = liveFighter2HP - before;
+
+            enemyBuff.cdSoin = 3;
+
+            logLine(enemyChar.getName() + " se soigne de " + healed + " PV.");
+            recordAction("SOIN", enemyChar, enemyChar, 0,
+                    enemyChar.getName() + " se soigne de " + healed + " PV.",
+                    true);
+
             refreshHPBars();
             if (checkVictory()) return;
             advanceEndOfActorTurn(Side.ENEMY);
@@ -1356,19 +1366,36 @@ public class SwingView extends View {
             return;
         }
 
-// Boule de Feu si dispo
+        // 2) BOULE DE FEU si dispo
         if (enemyHasBoule && enemyBuff.cdBoule == 0 && RNG.nextInt(100) < 35) {
             int imm = getFireballImmediateDamage(enemyChar);
-            applyDamageWithDodge(Side.PLAYER, imm, "Boule de Feu de " + enemyChar.getName());
 
-            enemyBuff.fireballBonusTurns = 2;
+            // applique dégâts avec esquive (ta méthode existante). On loggue le résultat.
+            boolean dodged = applyDamageWithDodge(Side.PLAYER, imm,
+                    "Boule de Feu de " + enemyChar.getName());
+
+            if (dodged) {
+                recordAction("BOULE_DE_FEU", enemyChar, playerChar, 0,
+                        "Boule de Feu esquivée par " + playerChar.getName(),
+                        true);
+            } else {
+                recordAction("BOULE_DE_FEU", enemyChar, playerChar, imm,
+                        enemyChar.getName() + " lance Boule de Feu (" + imm + " dégâts).",
+                        true);
+            }
+
+            // buff +X dégâts pour 2 attaques
+            enemyBuff.fireballBonusTurns  = 2;
             enemyBuff.fireballBonusAmount = getFireballBonusPerTurn(enemyChar);
-            logLine(enemyChar.getName() + " s’imbue de flammes: +"
-                    + enemyBuff.fireballBonusAmount + " dégâts pendant 2 attaques.");
+            logLine(enemyChar.getName() + " s’imbue de flammes: +" +
+                    enemyBuff.fireballBonusAmount + " dégâts pendant 2 attaques.");
+            recordAction("BUFF_FEU", enemyChar, enemyChar, 0,
+                    enemyChar.getName() + " gagne +" + enemyBuff.fireballBonusAmount +
+                            " dégâts pour 2 attaques.",
+                    true);
 
             enemyBuff.cdBoule = 3;
 
-
             refreshHPBars();
             if (checkVictory()) return;
             advanceEndOfActorTurn(Side.ENEMY);
@@ -1376,35 +1403,83 @@ public class SwingView extends View {
             return;
         }
 
-
-// Surcharge si dispo et pas déjà en cours/prête
+        // 3) SURCHARGE si dispo et pas déjà armée
         if (enemyHasSurcharge && enemyBuff.cdSurcharge == 0 && !enemyBuff.surchargeReady && RNG.nextBoolean()) {
-            enemyBuff.surchargeReady = true;     // prêt pour SA prochaine attaque
+            enemyBuff.surchargeReady = true;   // prochain coup à 150%
             enemyBuff.cdSurcharge = 3;
+
             logLine(enemyChar.getName() + " se met en Surcharge. Prochain coup à 150%.");
+            recordAction("SURCHARGE", enemyChar, playerChar, 0,
+                    enemyChar.getName() + " prépare une attaque à 150% pour le prochain coup.",
+                    true);
+
             advanceEndOfActorTurn(Side.ENEMY);
             startNextPlayerTurn();
             return;
         }
 
-
-// Furtivité si dispo et pas déjà active
+        // 4) FURTIVITÉ si dispo et pas active
         if (enemyHasFurtivite && enemyBuff.cdFurtivite == 0 && enemyBuff.dodgeCharges == 0 && RNG.nextInt(100) < 25) {
-            enemyBuff.dodgeCharges = 3;
-            enemyBuff.cdFurtivite = 3;
+            enemyBuff.dodgeCharges = 3;  // 3 attaques à esquiver potentielles
+            enemyBuff.cdFurtivite  = 3;
+
             int pct = getFurtiviteDodgePercent(enemyChar);
             logLine(enemyChar.getName() + " devient furtif: " + pct + "% d’esquive pendant 3 attaques.");
+            recordAction("FURTIVITE", enemyChar, enemyChar, 0,
+                    enemyChar.getName() + " active Furtivité (" + pct + "%, 3 attaques).",
+                    true);
+
             advanceEndOfActorTurn(Side.ENEMY);
             startNextPlayerTurn();
             return;
         }
 
-        // Default: attack
-        doAttack(Side.ENEMY, Side.PLAYER, false);
-        if (checkVictory()) return;
+        // 5) ATTAQUE de base (force only) + prise en compte des buffs et de l’esquive du joueur
+        {
+            int dmg = enemyChar.getStrength();
 
-        startNextPlayerTurn();
+            // Surcharge active
+            if (enemyBuff.surchargeReady) {
+                dmg = (int) Math.round(dmg * 1.5);
+                enemyBuff.surchargeReady = false;
+            }
+            // Bonus feu en cours
+            if (enemyBuff.fireballBonusTurns > 0) {
+                dmg += enemyBuff.fireballBonusAmount;
+                enemyBuff.fireballBonusTurns--;
+            }
+
+            // Esquive du joueur si furtivité
+            boolean dodged = false;
+            if (playerBuff.dodgeCharges > 0) {
+                int pct = getFurtiviteDodgePercent(playerChar); // ta formule AGI-scaled
+                int roll = RNG.nextInt(100);
+                if (roll < pct) {
+                    dodged = true;
+                    playerBuff.dodgeCharges--;
+                    logLine(enemyChar.getName() + " attaque mais " + playerChar.getName() + " esquive (" + pct + "%) !");
+                }
+            }
+
+            if (!dodged) {
+                liveFighter1HP = Math.max(0, liveFighter1HP - dmg);
+                logLine(enemyChar.getName() + " frappe " + playerChar.getName() + " pour " + dmg + " dégâts.");
+                recordAction("ATTACK", enemyChar, playerChar, dmg,
+                        enemyChar.getName() + " inflige " + dmg + " dégâts à " + playerChar.getName(),
+                        true);
+            } else {
+                recordAction("ATTACK", enemyChar, playerChar, 0,
+                        playerChar.getName() + " esquive l’attaque.",
+                        true);
+            }
+
+            refreshHPBars();
+            if (checkVictory()) return;
+            advanceEndOfActorTurn(Side.ENEMY);
+            startNextPlayerTurn();
+        }
     }
+
 
     private void startNextPlayerTurn() {
         currentTurn++;
@@ -1466,26 +1541,34 @@ public class SwingView extends View {
         advanceEndOfActorTurn(attacker);
     }
 
-    private void applyDamageWithDodge(Side targetSide, int dmg, String label) {
-        BuffState targetBuff = targetSide == Side.PLAYER ? playerBuff : enemyBuff;
-        Character target = targetSide == Side.PLAYER ? playerChar : enemyChar;
+    private boolean applyDamageWithDodge(Side targetSide, int dmg, String label) {
+        BuffState targetBuff = (targetSide == Side.PLAYER) ? playerBuff : enemyBuff;
+        Character target      = (targetSide == Side.PLAYER) ? playerChar  : enemyChar;
 
+        // Tente une esquive si le buff est actif
         if (targetBuff.dodgeCharges > 0) {
-            int dodgePct = (target == playerChar) ? getFurtiviteDodgePercent(playerChar) : getFurtiviteDodgePercent(enemyChar);
-            targetBuff.dodgeCharges--; // on consomme 1 charge
-            if (RNG.nextInt(100) < dodgePct) {
+            int dodgePct = (target == playerChar)
+                    ? getFurtiviteDodgePercent(playerChar)
+                    : getFurtiviteDodgePercent(enemyChar);
+
+            int roll = RNG.nextInt(100);
+            if (roll < dodgePct) {
+                // Esquive réussie: consomme 1 charge
+                targetBuff.dodgeCharges--;
                 logLine(label + " est esquivée par " + target.getName() + " (" + dodgePct + "%) !");
-                return;
+                return true; // DODGED
             }
+            // sinon, pas d’esquive, on ne consomme pas la charge
         }
 
-
+        // Pas d’esquive => on applique les dégâts
         if (targetSide == Side.PLAYER) {
             liveFighter1HP = Math.max(0, liveFighter1HP - dmg);
         } else {
             liveFighter2HP = Math.max(0, liveFighter2HP - dmg);
         }
-        logLine(label + " inflige " + dmg + " dégâts à " + target.getName() + ".");
+        logLine(label + " inflige " + dmg + " dégâts à " + target.getName());
+        return false; // NOT dodged
     }
 
     private void advanceEndOfActorTurn(Side actor) {
