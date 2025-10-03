@@ -59,6 +59,7 @@ public class CharacterBuilder {
     private int strength = DEFAULT_STAT;
     private int agility = DEFAULT_STAT;
     private int intelligence = DEFAULT_STAT;
+    private ValidationResult lastValidationResult;
 
     /**
      * D\u00e9finit le nom du personnage.
@@ -132,6 +133,7 @@ public class CharacterBuilder {
      * 
      * @return un nouveau personnage valid\u00e9
      * @throws InvalidCharacterException si la validation \u00e9choue (contient toutes les erreurs)
+     * @see #buildOrNull() pour une variante sans exception
      */
     public Character build() {
         ValidationContext context = new ValidationContext(name, strength, agility, intelligence);
@@ -143,5 +145,70 @@ public class CharacterBuilder {
         }
         
         return new Character(name, strength, agility, intelligence);
+    }
+
+    /**
+     * Variante de {@link #build()} qui retourne null au lieu de lever une exception.
+     * Utile pour les tests, la console interactive, ou quand vous pr\u00e9f\u00e9rez g\u00e9rer
+     * les erreurs via des retours null plutôt que des exceptions.
+     * 
+     * <p><strong>Diff\u00e9rences avec build():</strong></p>
+     * <ul>
+     *   <li>{@code build()}: L\u00e8ve InvalidCharacterException en cas d'erreur (approche Java traditionnelle)</li>
+     *   <li>{@code buildOrNull()}: Retourne null en cas d'erreur (approche plus silencieuse)</li>
+     * </ul>
+     * 
+     * <p><strong>Exemple d'utilisation:</strong></p>
+     * <pre>
+     * CharacterBuilder builder = new CharacterBuilder()
+     *     .setName("Test")
+     *     .setStrength(-5);  // Invalide
+     * 
+     * Character c = builder.buildOrNull();
+     * if (c == null) {
+     *     System.out.println("La cr\u00e9ation a \u00e9chou\u00e9");
+     * } else {
+     *     System.out.println("Personnage cr\u00e9\u00e9: " + c.getName());
+     * }
+     * </pre>
+     * 
+     * <p><strong>Note:</strong> Pour obtenir les erreurs de validation, utilisez
+     * {@link #getLastValidationResult()} apr\u00e8s l'appel.</p>
+     * 
+     * @return un nouveau personnage valid\u00e9, ou null si la validation \u00e9choue
+     * @see #build() pour la version avec exception
+     * @see #getLastValidationResult() pour r\u00e9cup\u00e9rer les erreurs de validation
+     */
+    public Character buildOrNull() {
+        ValidationContext context = new ValidationContext(name, strength, agility, intelligence);
+        ValidatorChain chain = new ValidatorChain();
+        ValidationResult result = chain.validate(context);
+        
+        this.lastValidationResult = result;
+        
+        if (!result.isValid()) {
+            return null;
+        }
+        
+        return new Character(name, strength, agility, intelligence);
+    }
+
+    /**
+     * Retourne le r\u00e9sultat de la derni\u00e8re validation.
+     * Utile apr\u00e8s un appel \u00e0 {@link #buildOrNull()} pour obtenir les erreurs.
+     * 
+     * <p><strong>Exemple:</strong></p>
+     * <pre>
+     * Character c = builder.buildOrNull();
+     * if (c == null) {
+     *     ValidationResult result = builder.getLastValidationResult();
+     *     System.out.println("Erreurs: " + result.getAllErrorsMessage());
+     * }
+     * </pre>
+     * 
+     * @return le r\u00e9sultat de la derni\u00e8re validation, ou null si aucune validation n'a \u00e9t\u00e9 effectu\u00e9e
+     */
+    public ValidationResult getLastValidationResult() {
+        return lastValidationResult;
     }
 }
