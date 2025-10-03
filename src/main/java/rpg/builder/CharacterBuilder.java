@@ -5,6 +5,17 @@ import rpg.validation.ValidationContext;
 import rpg.validation.ValidationResult;
 import rpg.validation.ValidatorChain;
 
+/**
+ * Builder pour cr\u00e9er des personnages avec validation.
+ * Utilise le pattern Builder avec validation via une cha\u00eene de validateurs.
+ * 
+ * Exemple d'utilisation avec l'API fluide de ValidatorChain:
+ * <pre>
+ * ValidatorChain chain = ValidatorChain.start()
+ *     .add(new NameValidator())
+ *     .add(new StatsValidator());
+ * </pre>
+ */
 public class CharacterBuilder {
     private String name = "Unnamed";
     private int strength = 0;
