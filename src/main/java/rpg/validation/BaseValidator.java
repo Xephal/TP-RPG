@@ -1,5 +1,9 @@
 package rpg.validation;
 
+/**
+ * Classe de base abstraite pour les validateurs.
+ * Impl\u00e9mente le pattern Chain of Responsibility avec accumulation des erreurs.
+ */
 public abstract class BaseValidator implements Validator {
     private Validator next;
 
@@ -11,13 +15,14 @@ public abstract class BaseValidator implements Validator {
     @Override
     public ValidationResult validate(ValidationContext context) {
         ValidationResult result = validateSpecific(context);
-        if (!result.isValid()) {
-            return result;
-        }
+        
         if (next != null) {
-            return next.validate(context);
+            ValidationResult nextResult = next.validate(context);
+            // Combine les r\u00e9sultats pour accumuler les erreurs
+            return result.combine(nextResult);
         }
-        return ValidationResult.success();
+        
+        return result;
     }
 
     protected abstract ValidationResult validateSpecific(ValidationContext context);

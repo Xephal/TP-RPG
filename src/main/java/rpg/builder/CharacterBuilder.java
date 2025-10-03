@@ -37,7 +37,7 @@ public class CharacterBuilder {
         ValidationResult result = chain.validate(context);
         
         if (!result.isValid()) {
-            throw new InvalidCharacterException(result.getMessage());
+            throw new InvalidCharacterException(result.getErrors());
         }
         
         return new Character(name, strength, agility, intelligence);
