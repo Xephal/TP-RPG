@@ -3,14 +3,39 @@ package rpg.validation;
 import rpg.settings.GameSettings;
 
 public class ArmyValidator extends BaseValidator {
+    private final int currentPartyCount;
+
+    public ArmyValidator() {
+        this.currentPartyCount = 0;
+    }
+
+    public ArmyValidator(int currentPartyCount) {
+        this.currentPartyCount = currentPartyCount;
+    }
+
     @Override
     protected ValidationResult validateSpecific(ValidationContext context) {
-        // Ce validateur peut être utilisé pour valider l'ajout d'une partie à une armée
-        // Pour l'instant, il s'assure juste que les règles de base sont respectées
+        GameSettings settings = GameSettings.getInstance();
+        int maxGroupsPerArmy = settings.getMaxGroupsPerArmy();
 
-        // La validation spécifique aux armées est maintenant gérée directement dans
-        // SwingView
-        // lors de l'ajout de parties aux armées
+        if (currentPartyCount >= maxGroupsPerArmy) {
+            return ValidationResult.failure(
+                    "Cannot add party: Maximum parties per army is " + maxGroupsPerArmy +
+                            ". This army already has " + currentPartyCount + " parties.");
+        }
+
+        return ValidationResult.success();
+    }
+
+    public ValidationResult validateArmySettings(int actualPartyCount) {
+        GameSettings settings = GameSettings.getInstance();
+        int maxGroupsPerArmy = settings.getMaxGroupsPerArmy();
+
+        if (actualPartyCount > maxGroupsPerArmy) {
+            return ValidationResult.failure(
+                    "Army validation failed: Has " + actualPartyCount +
+                            " parties but maximum allowed is " + maxGroupsPerArmy);
+        }
 
         return ValidationResult.success();
     }

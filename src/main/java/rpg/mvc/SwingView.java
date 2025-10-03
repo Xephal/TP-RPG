@@ -65,20 +65,19 @@ public class SwingView extends View {
 
     private static final int FURTIVITE_DODGE_PERCENT = 70; // Chance d'esquive quand furtif
 
-
     private final GameController controller;
     private final EventBus eventBus;
     private final DAO<Character> dao;
-    
+
     private JFrame frame;
     private JTabbedPane tabbedPane;
-    
+
     // Character Management
     private JTextField nameField;
     private JSpinner strSpinner, agiSpinner, intSpinner;
     private JList<Character> characterList;
     private DefaultListModel<Character> characterListModel;
-    
+
     // Combat
     private JComboBox<Character> fighter1Combo, fighter2Combo;
     private JTextArea combatLogArea;
@@ -98,28 +97,28 @@ public class SwingView extends View {
     private BattleHistory liveBattleHistory;
     private int currentActionIndex = 0;
     private boolean isAnimatingCombat = false;
-    
+
     // Settings
     private JSpinner maxStatPointsSpinner, maxCharactersSpinner, maxGroupsSpinner;
-    
+
     // Army Management
     private JTree hierarchyTree;
     private DefaultTreeModel treeModel;
     private DefaultMutableTreeNode rootNode;
     private JTextField armyNameField;
-    
+
     // Command History
     private JTree battleHistoryTree;
     private DefaultTreeModel historyTreeModel;
     private DefaultMutableTreeNode historyRootNode;
     private AdvancedBattleHistoryManager battleHistoryManager;
     private CombatEngine combatEngine;
-    
+
     // Character editing state
     private Character currentEditingCharacter;
     private boolean isCreatingNew;
     private Character temporaryCharacter; // For creation with decorators
-    
+
     // UI buttons for character management
     private JButton saveBtn;
     private JButton cancelBtn;
@@ -136,7 +135,10 @@ public class SwingView extends View {
     private static final Random RNG = new Random();
 
     // Turn-based state
-    private enum Side { PLAYER, ENEMY }
+    private enum Side {
+        PLAYER, ENEMY
+    }
+
     private boolean combatOngoing = false;
     private Character playerChar;
     private Character enemyChar;
@@ -144,10 +146,10 @@ public class SwingView extends View {
     // Per-side buffs and state
     private static class BuffState {
         // Effets
-        int fireballBonusTurns = 0;       // nombre de tours restants
-        int fireballBonusAmount = 0;      // +X dégâts tant que fireballBonusTurns > 0
-        boolean surchargeReady = false;   // prochain coup à 150%
-        int dodgeCharges = 0;                // furtivité active pendant X tours
+        int fireballBonusTurns = 0; // nombre de tours restants
+        int fireballBonusAmount = 0; // +X dégâts tant que fireballBonusTurns > 0
+        boolean surchargeReady = false; // prochain coup à 150%
+        int dodgeCharges = 0; // furtivité active pendant X tours
 
         // Cooldowns
         int cdSurcharge = 0;
@@ -156,13 +158,16 @@ public class SwingView extends View {
         int cdBoule = 0;
 
         void tickCooldowns() {
-            if (cdSurcharge > 0) cdSurcharge--;
-            if (cdFurtivite > 0) cdFurtivite--;
-            if (cdSoin > 0) cdSoin--;
-            if (cdBoule > 0) cdBoule--;
+            if (cdSurcharge > 0)
+                cdSurcharge--;
+            if (cdFurtivite > 0)
+                cdFurtivite--;
+            if (cdSoin > 0)
+                cdSoin--;
+            if (cdBoule > 0)
+                cdBoule--;
         }
     }
-
 
     private BuffState playerBuff = new BuffState();
     private BuffState enemyBuff = new BuffState();
@@ -184,18 +189,19 @@ public class SwingView extends View {
         frame.setLocationRelativeTo(null);
 
         tabbedPane = new JTabbedPane();
-        
+
         createCharacterTab();
         createCombatTab();
         createSettingsTab();
         createArmyTab();
         createHistoryTab();
-        
+
         frame.add(tabbedPane);
     }
 
     private void refreshCharacterList() {
-        if (characterListModel == null || fighter1Combo == null || fighter2Combo == null) return;
+        if (characterListModel == null || fighter1Combo == null || fighter2Combo == null)
+            return;
 
         characterListModel.clear();
         fighter1Combo.removeAllItems();
@@ -207,7 +213,6 @@ public class SwingView extends View {
             fighter2Combo.addItem(c);
         }
     }
-
 
     private void deleteSelectedCharacter() {
         rpg.core.Character selected = characterList.getSelectedValue();
@@ -248,8 +253,6 @@ public class SwingView extends View {
                     JOptionPane.ERROR_MESSAGE);
         }
     }
-
-
 
     private void createCharacterTab() {
         JPanel panel = new JPanel(new BorderLayout());
@@ -348,10 +351,22 @@ public class SwingView extends View {
         soinBox = new JCheckBox("Soin");
         bouleDeFeuBox = new JCheckBox("Boule de Feu");
 
-        surchargeBox.addActionListener(e -> { enforceSkillCheckboxLimitUI(); updateDecorators(); });
-        furtiviteBox.addActionListener(e -> { enforceSkillCheckboxLimitUI(); updateDecorators(); });
-        soinBox.addActionListener(e -> { enforceSkillCheckboxLimitUI(); updateDecorators(); });
-        bouleDeFeuBox.addActionListener(e -> { enforceSkillCheckboxLimitUI(); updateDecorators(); });
+        surchargeBox.addActionListener(e -> {
+            enforceSkillCheckboxLimitUI();
+            updateDecorators();
+        });
+        furtiviteBox.addActionListener(e -> {
+            enforceSkillCheckboxLimitUI();
+            updateDecorators();
+        });
+        soinBox.addActionListener(e -> {
+            enforceSkillCheckboxLimitUI();
+            updateDecorators();
+        });
+        bouleDeFeuBox.addActionListener(e -> {
+            enforceSkillCheckboxLimitUI();
+            updateDecorators();
+        });
 
         decoratorPanel.add(surchargeBox);
         decoratorPanel.add(Box.createVerticalStrut(5));
@@ -378,11 +393,11 @@ public class SwingView extends View {
 
     private void createCombatTab() {
         JPanel panel = new JPanel(new BorderLayout());
-        
+
         // Combat setup
         JPanel setupPanel = new JPanel(new FlowLayout());
         setupPanel.setBorder(new TitledBorder("Combat Setup"));
-        
+
         fighter1Combo = new JComboBox<>();
         fighter2Combo = new JComboBox<>();
         startCombatBtn = new JButton("Start Turn-based Combat");
@@ -438,12 +453,12 @@ public class SwingView extends View {
 
         panel.add(setupPanel, BorderLayout.NORTH);
         panel.add(centerPanel, BorderLayout.CENTER);
-        
+
         tabbedPane.addTab("Combat", panel);
 
         setActionButtonsEnabled(false);
     }
-    
+
     private JPanel createLiveBattleStatusPanel() {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
@@ -454,53 +469,119 @@ public class SwingView extends View {
         liveTurnLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
         liveTurnLabel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
         panel.add(liveTurnLabel);
-        
+
         panel.add(Box.createVerticalStrut(10));
 
         JLabel f1Label = new JLabel("Player HP:");
         f1Label.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
         panel.add(f1Label);
-        
+
         liveFighter1HPBar = new JProgressBar(0, 100);
         liveFighter1HPBar.setValue(100);
         liveFighter1HPBar.setStringPainted(true);
         liveFighter1HPBar.setString("100 / 100");
         liveFighter1HPBar.setForeground(Color.GREEN);
         panel.add(liveFighter1HPBar);
-        
+
         panel.add(Box.createVerticalStrut(5));
 
         JLabel f2Label = new JLabel("Enemy HP:");
         f2Label.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
         panel.add(f2Label);
-        
+
         liveFighter2HPBar = new JProgressBar(0, 100);
         liveFighter2HPBar.setValue(100);
         liveFighter2HPBar.setStringPainted(true);
         liveFighter2HPBar.setString("100 / 100");
         liveFighter2HPBar.setForeground(Color.GREEN);
         panel.add(liveFighter2HPBar);
-        
+
         return panel;
     }
 
     private void applySettings() {
         // Si tu as bien rpg.settings.GameSettings, on pousse les valeurs UI dedans.
         GameSettings settings = GameSettings.getInstance();
-        settings.setMaxStatPoints((Integer) maxStatPointsSpinner.getValue());
-        settings.setMaxCharactersPerGroup((Integer) maxCharactersSpinner.getValue());
-        settings.setMaxGroupsPerArmy((Integer) maxGroupsSpinner.getValue());
+        int newMaxStatPoints = (Integer) maxStatPointsSpinner.getValue();
+        int newMaxCharactersPerGroup = (Integer) maxCharactersSpinner.getValue();
+        int newMaxGroupsPerArmy = (Integer) maxGroupsSpinner.getValue();
 
-        JOptionPane.showMessageDialog(frame, "Settings applied successfully", "Settings", JOptionPane.INFORMATION_MESSAGE);
+        // Valider les nouvelles limites contre l'état actuel
+        StringBuilder violations = new StringBuilder();
+
+        // Vérifier les personnages existants contre la nouvelle limite de stats
+        for (Character c : dao.findAll()) {
+            int totalStats = c.getStrength() + c.getAgility() + c.getIntelligence();
+            if (totalStats > newMaxStatPoints) {
+                violations.append("- Character '").append(c.getName())
+                        .append("' has ").append(totalStats).append(" total stats but new limit is ")
+                        .append(newMaxStatPoints).append("\n");
+            }
+        }
+
+        // Vérifier les armées existantes contre les nouvelles limites
+        for (int i = 0; i < rootNode.getChildCount(); i++) {
+            DefaultMutableTreeNode armyNode = (DefaultMutableTreeNode) rootNode.getChildAt(i);
+            if (armyNode instanceof ArmyTreeNode) {
+                int partyCount = armyNode.getChildCount();
+                if (partyCount > newMaxGroupsPerArmy) {
+                    violations.append("- Army '").append(armyNode.getUserObject())
+                            .append("' has ").append(partyCount).append(" parties but new limit is ")
+                            .append(newMaxGroupsPerArmy).append("\n");
+                }
+
+                // Vérifier chaque partie dans cette armée
+                for (int j = 0; j < armyNode.getChildCount(); j++) {
+                    DefaultMutableTreeNode partyNode = (DefaultMutableTreeNode) armyNode.getChildAt(j);
+                    if (partyNode instanceof PartyTreeNode) {
+                        int characterCount = partyNode.getChildCount();
+                        if (characterCount > newMaxCharactersPerGroup) {
+                            violations.append("- Party '").append(partyNode.getUserObject())
+                                    .append("' has ").append(characterCount).append(" characters but new limit is ")
+                                    .append(newMaxCharactersPerGroup).append("\n");
+                        }
+                    }
+                }
+            }
+        }
+
+        // Si des violations existent, afficher un avertissement
+        if (violations.length() > 0) {
+            String message = "Warning: The following elements violate the new settings:\n\n" +
+                    violations.toString() +
+                    "\nDo you want to apply the settings anyway?";
+
+            int choice = JOptionPane.showConfirmDialog(
+                    frame,
+                    message,
+                    "Settings Violations Detected",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE);
+
+            if (choice != JOptionPane.YES_OPTION) {
+                return; // Annuler l'application des paramètres
+            }
+        }
+
+        // Appliquer les nouveaux paramètres
+        settings.setMaxStatPoints(newMaxStatPoints);
+        settings.setMaxCharactersPerGroup(newMaxCharactersPerGroup);
+        settings.setMaxGroupsPerArmy(newMaxGroupsPerArmy);
+
+        String successMessage = "Settings applied successfully";
+        if (violations.length() > 0) {
+            successMessage += "\n\nNote: Some existing elements exceed the new limits.";
+        }
+
+        JOptionPane.showMessageDialog(frame, successMessage, "Settings", JOptionPane.INFORMATION_MESSAGE);
         eventBus.notifyObservers("SETTINGS_CHANGED", "Settings updated");
     }
-
 
     private void createSettingsTab() {
         JPanel panel = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(10, 10, 10, 10);
-        
+
         GameSettings settings = GameSettings.getInstance();
 
         gbc.gridx = 0;
@@ -530,12 +611,13 @@ public class SwingView extends View {
         JButton applyBtn = new JButton("Apply Settings");
         applyBtn.addActionListener(e -> applySettings());
         panel.add(applyBtn, gbc);
-        
+
         tabbedPane.addTab("Settings", panel);
     }
 
     private void removeCharacterFromArmyTree(Character toRemove) {
-        if (rootNode == null) return;
+        if (rootNode == null)
+            return;
         for (int i = 0; i < rootNode.getChildCount(); i++) {
             DefaultMutableTreeNode armyNode = (DefaultMutableTreeNode) rootNode.getChildAt(i);
             for (int j = 0; j < armyNode.getChildCount(); j++) {
@@ -573,27 +655,28 @@ public class SwingView extends View {
         }
         if (updated) {
             treeModel.reload(rootNode);
+            refreshTreeDisplay(); // Mettre à jour les totaux de puissance affichés
         }
     }
 
     private void createArmyTab() {
         JPanel panel = new JPanel(new BorderLayout());
-        
+
         // Top panel with creation controls
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         topPanel.setBorder(new TitledBorder("Army Management"));
-        
+
         armyNameField = new JTextField(15);
         JButton createArmyBtn = new JButton("Create Army");
         JButton createPartyBtn = new JButton("Add Party");
         JButton addCharacterBtn = new JButton("Add Character");
         JButton removeBtn = new JButton("Remove Selected");
-        
+
         createArmyBtn.addActionListener(e -> createArmyInTree());
         createPartyBtn.addActionListener(e -> addPartyToSelected());
         addCharacterBtn.addActionListener(e -> addCharacterToSelected());
         removeBtn.addActionListener(e -> removeSelectedNode());
-        
+
         topPanel.add(new JLabel("Army Name:"));
         topPanel.add(armyNameField);
         topPanel.add(createArmyBtn);
@@ -601,20 +684,20 @@ public class SwingView extends View {
         topPanel.add(createPartyBtn);
         topPanel.add(addCharacterBtn);
         topPanel.add(removeBtn);
-        
+
         // Create the tree
         rootNode = new DefaultMutableTreeNode("Armies");
         treeModel = new DefaultTreeModel(rootNode);
         hierarchyTree = new JTree(treeModel);
-        
+
         // Configure tree appearance
         hierarchyTree.setRootVisible(false); // Hide root to show armies as top level
         hierarchyTree.setShowsRootHandles(true);
         hierarchyTree.setEditable(false);
-        
+
         // Custom cell renderer for different node types
         hierarchyTree.setCellRenderer(new CustomTreeCellRenderer());
-        
+
         // Add mouse listener for double-click actions
         hierarchyTree.addMouseListener(new MouseAdapter() {
             @Override
@@ -624,21 +707,21 @@ public class SwingView extends View {
                 }
             }
         });
-        
+
         JScrollPane treeScroll = new JScrollPane(hierarchyTree);
         treeScroll.setBorder(new TitledBorder("Army Hierarchy"));
-        
+
         // Instructions panel
         JPanel instructionsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         instructionsPanel.add(new JLabel("Double-click to expand/collapse. Right-click for context menu."));
-        
+
         panel.add(topPanel, BorderLayout.NORTH);
         panel.add(treeScroll, BorderLayout.CENTER);
         panel.add(instructionsPanel, BorderLayout.SOUTH);
-        
+
         tabbedPane.addTab("Armies", panel);
     }
-    
+
     // Tree management methods
     private void createArmyInTree() {
         String name = armyNameField.getText().trim();
@@ -646,19 +729,19 @@ public class SwingView extends View {
             JOptionPane.showMessageDialog(frame, "Please enter army name", "Input Error", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        
+
         Army army = new Army(name);
         ArmyTreeNode armyNode = new ArmyTreeNode(army);
         rootNode.add(armyNode);
         treeModel.reload(rootNode);
-        
+
         // Expand the root to show the new army
         hierarchyTree.expandPath(new TreePath(rootNode.getPath()));
-        
+
         armyNameField.setText("");
         eventBus.notifyObservers("ARMY_CREATED", army.getName());
     }
-    
+
     private void addPartyToSelected() {
         TreePath selectionPath = hierarchyTree.getSelectionPath();
         if (selectionPath == null) {
@@ -666,9 +749,9 @@ public class SwingView extends View {
                     JOptionPane.WARNING_MESSAGE);
             return;
         }
-        
+
         DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectionPath.getLastPathComponent();
-        
+
         // Can only add parties to Army nodes
         if (!(selectedNode instanceof ArmyTreeNode)) {
             JOptionPane.showMessageDialog(frame, "Parties can only be added to Armies", "Invalid Selection",
@@ -693,15 +776,15 @@ public class SwingView extends View {
             PartyTreeNode partyNode = new PartyTreeNode(partyName.trim());
             selectedNode.add(partyNode);
             treeModel.reload(selectedNode);
-            
+
             // Expand the army to show the new party
             hierarchyTree.expandPath(selectionPath);
-            
+
             // Refresh display to show updated power totals
             refreshTreeDisplay();
         }
     }
-    
+
     private void addCharacterToSelected() {
         TreePath selectionPath = hierarchyTree.getSelectionPath();
         if (selectionPath == null) {
@@ -709,9 +792,9 @@ public class SwingView extends View {
                     JOptionPane.WARNING_MESSAGE);
             return;
         }
-        
+
         DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectionPath.getLastPathComponent();
-        
+
         // Can only add characters to Party nodes
         if (!(selectedNode instanceof PartyTreeNode)) {
             JOptionPane.showMessageDialog(frame, "Characters can only be added to Parties", "Invalid Selection",
@@ -737,7 +820,7 @@ public class SwingView extends View {
                     "No Characters", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        
+
         Character[] characters = availableCharacters.toArray(new Character[0]);
         Character selectedCharacter = (Character) JOptionPane.showInputDialog(
                 frame,
@@ -752,15 +835,15 @@ public class SwingView extends View {
             CharacterTreeNode characterNode = new CharacterTreeNode(selectedCharacter);
             selectedNode.add(characterNode);
             treeModel.reload(selectedNode);
-            
+
             // Expand the party to show the new character
             hierarchyTree.expandPath(selectionPath);
-            
+
             // Refresh display to show updated power totals
             refreshTreeDisplay();
         }
     }
-    
+
     private void removeSelectedNode() {
         TreePath selectionPath = hierarchyTree.getSelectionPath();
         if (selectionPath == null) {
@@ -768,16 +851,16 @@ public class SwingView extends View {
                     JOptionPane.WARNING_MESSAGE);
             return;
         }
-        
+
         DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectionPath.getLastPathComponent();
-        
+
         // Cannot remove root
         if (selectedNode == rootNode) {
             JOptionPane.showMessageDialog(frame, "Cannot remove the root node", "Invalid Operation",
                     JOptionPane.WARNING_MESSAGE);
             return;
         }
-        
+
         int result = JOptionPane.showConfirmDialog(
                 frame,
                 "Are you sure you want to remove '" + selectedNode.getUserObject() + "'?",
@@ -788,12 +871,12 @@ public class SwingView extends View {
             DefaultMutableTreeNode parent = (DefaultMutableTreeNode) selectedNode.getParent();
             parent.remove(selectedNode);
             treeModel.reload(parent);
-            
+
             // Refresh display to show updated power totals
             refreshTreeDisplay();
         }
     }
-    
+
     private void handleDoubleClick() {
         TreePath selectionPath = hierarchyTree.getSelectionPath();
         if (selectionPath != null) {
@@ -804,11 +887,11 @@ public class SwingView extends View {
             }
         }
     }
-    
+
     private void refreshTreeDisplay() {
         // Force the tree to repaint to show updated power calculations
         treeModel.reload(rootNode);
-        
+
         // Expand all armies by default
         for (int i = 0; i < rootNode.getChildCount(); i++) {
             TreePath armyPath = new TreePath(new Object[] { rootNode, rootNode.getChildAt(i) });
@@ -832,11 +915,9 @@ public class SwingView extends View {
                 action.getActionType() != null ? action.getActionType() : "(?)",
                 action.getDamage(),
                 action.isModifiable() ? "Yes" : "No",
-                action.getDescription() != null ? action.getDescription() : ""
-        );
+                action.getDescription() != null ? action.getDescription() : "");
         JOptionPane.showMessageDialog(frame, details, "Action Details", JOptionPane.INFORMATION_MESSAGE);
     }
-
 
     private void handleBattleDoubleClick() {
         TreePath selectionPath = battleHistoryTree.getSelectionPath();
@@ -850,7 +931,8 @@ public class SwingView extends View {
                 BattleAction action = ((ActionNode) selectedNode).getAction();
                 showActionDetails(action);
             } else {
-                // Pas une bataille ni une action? On plie/déplie, histoire d’être utile quand même.
+                // Pas une bataille ni une action? On plie/déplie, histoire d’être utile quand
+                // même.
                 if (battleHistoryTree.isExpanded(selectionPath)) {
                     battleHistoryTree.collapsePath(selectionPath);
                 } else {
@@ -860,20 +942,19 @@ public class SwingView extends View {
         }
     }
 
-
     private void createHistoryTab() {
         JPanel panel = new JPanel(new BorderLayout());
-        
+
         // Create the history tree
         historyRootNode = new DefaultMutableTreeNode("Battle History");
         historyTreeModel = new DefaultTreeModel(historyRootNode);
         battleHistoryTree = new JTree(historyTreeModel);
-        
+
         // Configure tree
         battleHistoryTree.setRootVisible(false);
         battleHistoryTree.setShowsRootHandles(true);
         battleHistoryTree.setCellRenderer(new BattleHistoryTreeRenderer());
-        
+
         // Add double-click listener for battle details
         battleHistoryTree.addMouseListener(new MouseAdapter() {
             @Override
@@ -883,27 +964,27 @@ public class SwingView extends View {
                 }
             }
         });
-        
+
         JScrollPane treeScroll = new JScrollPane(battleHistoryTree);
         treeScroll.setBorder(new TitledBorder("Battle History"));
-        
+
         // Button panel
         JPanel buttonPanel = new JPanel(new FlowLayout());
         JButton refreshBtn = new JButton("Refresh");
         JButton replayBtn = new JButton("Replay Battle");
         JButton clearBtn = new JButton("Clear History");
         JButton exportBtn = new JButton("Export Battle");
-        
+
         refreshBtn.addActionListener(e -> refreshBattleHistory());
         replayBtn.addActionListener(e -> replaySelectedBattle());
         clearBtn.addActionListener(e -> clearBattleHistory());
         exportBtn.addActionListener(e -> exportSelectedBattle());
-        
+
         buttonPanel.add(refreshBtn);
         buttonPanel.add(replayBtn);
         buttonPanel.add(clearBtn);
         buttonPanel.add(exportBtn);
-        
+
         // Instructions
         JPanel instructionsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         instructionsPanel.add(new JLabel(
@@ -912,7 +993,7 @@ public class SwingView extends View {
         panel.add(treeScroll, BorderLayout.CENTER);
         panel.add(buttonPanel, BorderLayout.NORTH);
         panel.add(instructionsPanel, BorderLayout.SOUTH);
-        
+
         tabbedPane.addTab("History", panel);
     }
 
@@ -943,15 +1024,15 @@ public class SwingView extends View {
         isCreatingNew = false;
         currentEditingCharacter = character;
         temporaryCharacter = null;
-        
+
         nameField.setText(character.getName());
         strSpinner.setValue(character.getStrength());
         agiSpinner.setValue(character.getAgility());
         intSpinner.setValue(character.getIntelligence());
-        
+
         // Update decorator checkboxes based on current character
         updateDecoratorCheckboxes(character);
-        
+
         nameField.setEnabled(false); // Can't change name of existing character
         strSpinner.setEnabled(true);
         agiSpinner.setEnabled(true);
@@ -967,7 +1048,8 @@ public class SwingView extends View {
     private void saveCurrentCharacter() {
         try {
             // Stop net si > 2
-            if (!ensureSkillLimitOrWarn()) return;
+            if (!ensureSkillLimitOrWarn())
+                return;
 
             if (isCreatingNew) {
                 String name = nameField.getText().trim();
@@ -976,7 +1058,8 @@ public class SwingView extends View {
                 int intel = (Integer) intSpinner.getValue();
 
                 if (name.isEmpty()) {
-                    JOptionPane.showMessageDialog(frame, "Please enter a character name", "Validation Error", JOptionPane.WARNING_MESSAGE);
+                    JOptionPane.showMessageDialog(frame, "Please enter a character name", "Validation Error",
+                            JOptionPane.WARNING_MESSAGE);
                     return;
                 }
 
@@ -985,12 +1068,14 @@ public class SwingView extends View {
 
                 // Validation des règles globales (incluant max skills si tu l’as ajouté)
                 if (!rpg.settings.GameSettings.getInstance().isValid(decorated)) {
-                    JOptionPane.showMessageDialog(frame, "Règles du jeu violées (compétences/stat).", "Validation", JOptionPane.WARNING_MESSAGE);
+                    JOptionPane.showMessageDialog(frame, "Règles du jeu violées (compétences/stat).", "Validation",
+                            JOptionPane.WARNING_MESSAGE);
                     return;
                 }
 
                 dao.save(decorated);
-                JOptionPane.showMessageDialog(frame, "Character created successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(frame, "Character created successfully!", "Success",
+                        JOptionPane.INFORMATION_MESSAGE);
 
                 refreshCharacterList();
                 clearCharacterForm();
@@ -1005,14 +1090,19 @@ public class SwingView extends View {
                 Character newDecorated = applySelectedDecorators(newBase);
 
                 if (!rpg.settings.GameSettings.getInstance().isValid(newDecorated)) {
-                    JOptionPane.showMessageDialog(frame, "Règles du jeu violées (compétences/stat).", "Validation", JOptionPane.WARNING_MESSAGE);
+                    JOptionPane.showMessageDialog(frame, "Règles du jeu violées (compétences/stat).", "Validation",
+                            JOptionPane.WARNING_MESSAGE);
                     return;
                 }
 
                 dao.update(currentEditingCharacter, newDecorated);
                 currentEditingCharacter = newDecorated;
 
-                JOptionPane.showMessageDialog(frame, "Character updated successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                // Mettre à jour le personnage dans l'arbre des armées
+                updateCharacterInArmyTree(newDecorated);
+
+                JOptionPane.showMessageDialog(frame, "Character updated successfully!", "Success",
+                        JOptionPane.INFORMATION_MESSAGE);
                 refreshCharacterList();
 
                 // Rester sélectionné
@@ -1025,7 +1115,7 @@ public class SwingView extends View {
                     }
                 }
             }
-            
+
         } catch (InvalidCharacterException e) {
             JOptionPane.showMessageDialog(frame, "Error: " + e.getMessage(), "Save Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -1041,7 +1131,7 @@ public class SwingView extends View {
         strSpinner.setValue(5);
         agiSpinner.setValue(5);
         intSpinner.setValue(5);
-        
+
         nameField.setEnabled(false);
         strSpinner.setEnabled(false);
         agiSpinner.setEnabled(false);
@@ -1053,7 +1143,7 @@ public class SwingView extends View {
         currentEditingCharacter = null;
         temporaryCharacter = null;
         isCreatingNew = false;
-        
+
         // Hide save/cancel buttons
         saveBtn.setVisible(false);
         cancelBtn.setVisible(false);
@@ -1065,7 +1155,7 @@ public class SwingView extends View {
         soinBox.setSelected(hasDecorator(character, Soin.class));
         bouleDeFeuBox.setSelected(hasDecorator(character, BouleDeFeu.class));
     }
-    
+
     private boolean hasDecorator(Character character, Class<?> decoratorClass) {
         Character current = character;
         while (current instanceof CharacterDecorator) {
@@ -1076,7 +1166,7 @@ public class SwingView extends View {
         }
         return false;
     }
-    
+
     private void updateDecorators() {
         if (isCreatingNew) {
             // For new character creation, update temporary character
@@ -1086,10 +1176,11 @@ public class SwingView extends View {
             updateExistingCharacterDecorators();
         }
     }
-    
+
     private void updateTemporaryCharacterDecorators() {
         try {
-            if (!ensureSkillLimitOrWarn()) return;
+            if (!ensureSkillLimitOrWarn())
+                return;
 
             if (temporaryCharacter == null) {
                 String name = nameField.getText().trim();
@@ -1101,7 +1192,7 @@ public class SwingView extends View {
                 int str = (Integer) strSpinner.getValue();
                 int agi = (Integer) agiSpinner.getValue();
                 int intel = (Integer) intSpinner.getValue();
-                
+
                 temporaryCharacter = controller.buildCharacter(name, str, agi, intel);
             }
 
@@ -1119,10 +1210,11 @@ public class SwingView extends View {
                     JOptionPane.ERROR_MESSAGE);
         }
     }
-    
+
     private void updateExistingCharacterDecorators() {
         try {
-            if (!ensureSkillLimitOrWarn()) return;
+            if (!ensureSkillLimitOrWarn())
+                return;
 
             int str = (Integer) strSpinner.getValue();
             int agi = (Integer) agiSpinner.getValue();
@@ -1147,26 +1239,30 @@ public class SwingView extends View {
                     break;
                 }
             }
-            
+
         } catch (InvalidCharacterException e) {
             JOptionPane.showMessageDialog(frame, "Error updating character: " + e.getMessage(), "Update Error",
                     JOptionPane.ERROR_MESSAGE);
         }
     }
-    
+
     private Character applySelectedDecorators(Character baseCharacter) {
         Character result = baseCharacter;
-        if (surchargeBox.isSelected()) result = new rpg.decorator.Surcharge(result);
-        if (furtiviteBox.isSelected()) result = new rpg.decorator.Furtivite(result);
-        if (soinBox.isSelected()) result = new rpg.decorator.Soin(result);
-        if (bouleDeFeuBox.isSelected()) result = new rpg.decorator.BouleDeFeu(result);
+        if (surchargeBox.isSelected())
+            result = new rpg.decorator.Surcharge(result);
+        if (furtiviteBox.isSelected())
+            result = new rpg.decorator.Furtivite(result);
+        if (soinBox.isSelected())
+            result = new rpg.decorator.Soin(result);
+        if (bouleDeFeuBox.isSelected())
+            result = new rpg.decorator.BouleDeFeu(result);
         return result;
     }
 
     private void startCombat() {
         Character f1 = (Character) fighter1Combo.getSelectedItem();
         Character f2 = (Character) fighter2Combo.getSelectedItem();
-        
+
         if (f1 == null || f2 == null) {
             JOptionPane.showMessageDialog(frame, "Please select two fighters", "Combat Error",
                     JOptionPane.WARNING_MESSAGE);
@@ -1185,13 +1281,13 @@ public class SwingView extends View {
         liveFighter2MaxHP = 300;
         liveFighter1HP = liveFighter1MaxHP;
         liveFighter2HP = liveFighter2MaxHP;
-        
+
         // Setup HP bars with fighter names
         liveFighter1HPBar.setMaximum(liveFighter1MaxHP);
         liveFighter1HPBar.setValue(liveFighter1HP);
         liveFighter1HPBar.setString(liveFighter1HP + " / " + liveFighter1MaxHP);
         liveFighter1HPBar.setForeground(Color.GREEN);
-        
+
         liveFighter2HPBar.setMaximum(liveFighter2MaxHP);
         liveFighter2HPBar.setValue(liveFighter2HP);
         liveFighter2HPBar.setString(liveFighter2HP + " / " + liveFighter2MaxHP);
@@ -1220,31 +1316,30 @@ public class SwingView extends View {
     }
 
     private void recordAction(String actionType,
-                              Character actor,
-                              Character target,
-                              int damage,
-                              String description,
-                              boolean modifiable) {
-        if (liveBattleHistory == null) return;
+            Character actor,
+            Character target,
+            int damage,
+            String description,
+            boolean modifiable) {
+        if (liveBattleHistory == null)
+            return;
 
         BattleAction action = new BattleAction(
-                currentTurn,   // round
+                currentTurn, // round
                 actor,
                 target,
                 actionType,
-                description,   // description vient AVANT damage
+                description, // description vient AVANT damage
                 damage,
-                modifiable
-        );
+                modifiable);
 
         liveBattleHistory.addAction(action);
         refreshBattleHistory();
     }
 
-
-
     private void onPlayerAttack() {
-        if (!combatOngoing) return;
+        if (!combatOngoing)
+            return;
 
         // Dégâts = force uniquement
         int dmg = playerChar.getStrength();
@@ -1285,16 +1380,18 @@ public class SwingView extends View {
         }
 
         refreshHPBars();
-        if (checkVictory()) return;
+        if (checkVictory())
+            return;
 
         // Fin du tour joueur → tour ennemi
         endPlayerTurnAndRunEnemy();
     }
 
-
     private void onPlayerSurcharge() {
-        if (!combatOngoing) return;
-        if (!hasDecorator(playerChar, rpg.decorator.Surcharge.class)) return;
+        if (!combatOngoing)
+            return;
+        if (!hasDecorator(playerChar, rpg.decorator.Surcharge.class))
+            return;
         if (playerBuff.cdSurcharge > 0) {
             logLine("Surcharge en recharge (" + playerBuff.cdSurcharge + ").");
             return;
@@ -1310,8 +1407,6 @@ public class SwingView extends View {
 
         endPlayerNoDamageActionAndPassToEnemy();
     }
-
-
 
     // Furtivité: base 30% + 2% par point d’AGI, cap à 90%.
     private int getFurtiviteDodgePercent(Character c) {
@@ -1331,16 +1426,17 @@ public class SwingView extends View {
         return Math.min(10, 1 + caster.getIntelligence() / 3);
     }
 
-
     private void onPlayerFurtivite() {
-        if (!combatOngoing) return;
-        if (!hasDecorator(playerChar, rpg.decorator.Furtivite.class)) return;
+        if (!combatOngoing)
+            return;
+        if (!hasDecorator(playerChar, rpg.decorator.Furtivite.class))
+            return;
         if (playerBuff.cdFurtivite > 0) {
             logLine("Furtivité en recharge (" + playerBuff.cdFurtivite + ").");
             return;
         }
 
-        playerBuff.dodgeCharges = 3;  // 3 tours d’esquive
+        playerBuff.dodgeCharges = 3; // 3 tours d’esquive
         playerBuff.cdFurtivite = 3;
 
         int chance = playerChar.getAgility() * 5; // % basé sur agi
@@ -1352,12 +1448,11 @@ public class SwingView extends View {
         endPlayerNoDamageActionAndPassToEnemy();
     }
 
-
-
-
     private void onPlayerSoin() {
-        if (!combatOngoing) return;
-        if (!hasDecorator(playerChar, rpg.decorator.Soin.class)) return;
+        if (!combatOngoing)
+            return;
+        if (!hasDecorator(playerChar, rpg.decorator.Soin.class))
+            return;
         if (playerBuff.cdSoin > 0) {
             logLine("Soin en recharge (" + playerBuff.cdSoin + ").");
             return;
@@ -1378,12 +1473,11 @@ public class SwingView extends View {
         endPlayerNoDamageActionAndPassToEnemy();
     }
 
-
-
-
     private void onPlayerBouleDeFeu() {
-        if (!combatOngoing) return;
-        if (!hasDecorator(playerChar, rpg.decorator.BouleDeFeu.class)) return;
+        if (!combatOngoing)
+            return;
+        if (!hasDecorator(playerChar, rpg.decorator.BouleDeFeu.class))
+            return;
         if (playerBuff.cdBoule > 0) {
             logLine("Boule de Feu en recharge (" + playerBuff.cdBoule + ").");
             return;
@@ -1396,14 +1490,16 @@ public class SwingView extends View {
         if (enemyBuff.dodgeCharges > 0) {
             int chance = enemyChar.getAgility() * 5;
             int roll = (int) (Math.random() * 100);
-            if (roll < chance) dodged = true;
+            if (roll < chance)
+                dodged = true;
         }
 
         if (!dodged) {
             liveFighter2HP = Math.max(0, liveFighter2HP - imm);
             logLine("Boule de Feu inflige " + imm + " dégâts à " + enemyChar.getName());
             recordAction("BOULE_DE_FEU", playerChar, enemyChar, imm,
-                    playerChar.getName() + " lance une Boule de Feu sur " + enemyChar.getName() + " (" + imm + " dégâts).",
+                    playerChar.getName() + " lance une Boule de Feu sur " + enemyChar.getName() + " (" + imm
+                            + " dégâts).",
                     true);
         } else {
             logLine(enemyChar.getName() + " esquive la Boule de Feu !");
@@ -1422,30 +1518,30 @@ public class SwingView extends View {
                 true);
 
         refreshHPBars();
-        if (checkVictory()) return;
+        if (checkVictory())
+            return;
 
         endPlayerTurnAndRunEnemy();
     }
 
-
-
-
     private void endPlayerNoDamageActionAndPassToEnemy() {
         // Conclude any charge transitions
         advanceEndOfActorTurn(Side.PLAYER);
-        if (checkVictory()) return;
+        if (checkVictory())
+            return;
         enemyTurn();
     }
 
     private void enemyTurn() {
-        if (!combatOngoing) return;
+        if (!combatOngoing)
+            return;
 
         setActionButtonsEnabled(false);
 
-        boolean enemyHasHeal      = hasDecorator(enemyChar, Soin.class);
+        boolean enemyHasHeal = hasDecorator(enemyChar, Soin.class);
         boolean enemyHasSurcharge = hasDecorator(enemyChar, Surcharge.class);
         boolean enemyHasFurtivite = hasDecorator(enemyChar, Furtivite.class);
-        boolean enemyHasBoule     = hasDecorator(enemyChar, BouleDeFeu.class);
+        boolean enemyHasBoule = hasDecorator(enemyChar, BouleDeFeu.class);
 
         // 1) SOIN si PV bas et CD prêt
         if (enemyHasHeal && enemyBuff.cdSoin == 0
@@ -1464,7 +1560,8 @@ public class SwingView extends View {
                     true);
 
             refreshHPBars();
-            if (checkVictory()) return;
+            if (checkVictory())
+                return;
             advanceEndOfActorTurn(Side.ENEMY);
             startNextPlayerTurn();
             return;
@@ -1489,7 +1586,7 @@ public class SwingView extends View {
             }
 
             // buff +X dégâts pour 2 attaques
-            enemyBuff.fireballBonusTurns  = 2;
+            enemyBuff.fireballBonusTurns = 2;
             enemyBuff.fireballBonusAmount = getFireballBonusPerTurn(enemyChar);
             logLine(enemyChar.getName() + " s’imbue de flammes: +" +
                     enemyBuff.fireballBonusAmount + " dégâts pendant 2 attaques.");
@@ -1501,7 +1598,8 @@ public class SwingView extends View {
             enemyBuff.cdBoule = 3;
 
             refreshHPBars();
-            if (checkVictory()) return;
+            if (checkVictory())
+                return;
             advanceEndOfActorTurn(Side.ENEMY);
             startNextPlayerTurn();
             return;
@@ -1509,7 +1607,7 @@ public class SwingView extends View {
 
         // 3) SURCHARGE si dispo et pas déjà armée
         if (enemyHasSurcharge && enemyBuff.cdSurcharge == 0 && !enemyBuff.surchargeReady && RNG.nextBoolean()) {
-            enemyBuff.surchargeReady = true;   // prochain coup à 150%
+            enemyBuff.surchargeReady = true; // prochain coup à 150%
             enemyBuff.cdSurcharge = 3;
 
             logLine(enemyChar.getName() + " se met en Surcharge. Prochain coup à 150%.");
@@ -1524,8 +1622,8 @@ public class SwingView extends View {
 
         // 4) FURTIVITÉ si dispo et pas active
         if (enemyHasFurtivite && enemyBuff.cdFurtivite == 0 && enemyBuff.dodgeCharges == 0 && RNG.nextInt(100) < 25) {
-            enemyBuff.dodgeCharges = 3;  // 3 attaques à esquiver potentielles
-            enemyBuff.cdFurtivite  = 3;
+            enemyBuff.dodgeCharges = 3; // 3 attaques à esquiver potentielles
+            enemyBuff.cdFurtivite = 3;
 
             int pct = getFurtiviteDodgePercent(enemyChar);
             logLine(enemyChar.getName() + " devient furtif: " + pct + "% d’esquive pendant 3 attaques.");
@@ -1538,7 +1636,8 @@ public class SwingView extends View {
             return;
         }
 
-        // 5) ATTAQUE de base (force only) + prise en compte des buffs et de l’esquive du joueur
+        // 5) ATTAQUE de base (force only) + prise en compte des buffs et de l’esquive
+        // du joueur
         {
             int dmg = enemyChar.getStrength();
 
@@ -1561,7 +1660,8 @@ public class SwingView extends View {
                 if (roll < pct) {
                     dodged = true;
                     playerBuff.dodgeCharges--;
-                    logLine(enemyChar.getName() + " attaque mais " + playerChar.getName() + " esquive (" + pct + "%) !");
+                    logLine(enemyChar.getName() + " attaque mais " + playerChar.getName() + " esquive (" + pct
+                            + "%) !");
                 }
             }
 
@@ -1578,12 +1678,12 @@ public class SwingView extends View {
             }
 
             refreshHPBars();
-            if (checkVictory()) return;
+            if (checkVictory())
+                return;
             advanceEndOfActorTurn(Side.ENEMY);
             startNextPlayerTurn();
         }
     }
-
 
     private void startNextPlayerTurn() {
         currentTurn++;
@@ -1598,21 +1698,18 @@ public class SwingView extends View {
         BuffState atkBuff = attacker == Side.PLAYER ? playerBuff : enemyBuff;
         BuffState defBuff = defender == Side.PLAYER ? playerBuff : enemyBuff;
 
-
-        // Dégâts de base: uniquement la Force, avec une variance proportionnelle à la Force
+        // Dégâts de base: uniquement la Force, avec une variance proportionnelle à la
+        // Force
         int base = atk.getStrength() + RNG.nextInt((atk.getStrength() / 2) + 1);
-
 
         // Bonus Boule de Feu: s’applique et se consomme sur l’attaque
         if (atkBuff.fireballBonusTurns > 0) {
             base += Math.max(0, atkBuff.fireballBonusAmount);
-            atkBuff.fireballBonusTurns--;            // on consomme UNE attaque boostée
+            atkBuff.fireballBonusTurns--; // on consomme UNE attaque boostée
             if (atkBuff.fireballBonusTurns == 0) {
-                atkBuff.fireballBonusAmount = 0;     // proprement terminé
+                atkBuff.fireballBonusAmount = 0; // proprement terminé
             }
         }
-
-
 
         // Surcharge ready multiplier
         if (atkBuff.surchargeReady) {
@@ -1620,18 +1717,18 @@ public class SwingView extends View {
             atkBuff.surchargeReady = false; // consommé
         }
 
-
         // Apply dodge (furtivité) on defender
         if (defBuff.dodgeCharges > 0) {
-            int dodgePct = (def == playerChar) ? getFurtiviteDodgePercent(playerChar) : getFurtiviteDodgePercent(enemyChar);
+            int dodgePct = (def == playerChar) ? getFurtiviteDodgePercent(playerChar)
+                    : getFurtiviteDodgePercent(enemyChar);
             defBuff.dodgeCharges--; // on consomme 1 charge pour cette attaque entrante
             if (RNG.nextInt(100) < dodgePct) {
-                logLine(atk.getName() + " attaque " + def.getName() + " mais " + def.getName() + " esquive (" + dodgePct + "%) !");
+                logLine(atk.getName() + " attaque " + def.getName() + " mais " + def.getName() + " esquive (" + dodgePct
+                        + "%) !");
                 advanceEndOfActorTurn(attacker);
                 return;
             }
         }
-
 
         // Commit damage
         if (defender == Side.PLAYER) {
@@ -1647,7 +1744,7 @@ public class SwingView extends View {
 
     private boolean applyDamageWithDodge(Side targetSide, int dmg, String label) {
         BuffState targetBuff = (targetSide == Side.PLAYER) ? playerBuff : enemyBuff;
-        Character target      = (targetSide == Side.PLAYER) ? playerChar  : enemyChar;
+        Character target = (targetSide == Side.PLAYER) ? playerChar : enemyChar;
 
         // Tente une esquive si le buff est actif
         if (targetBuff.dodgeCharges > 0) {
@@ -1678,15 +1775,14 @@ public class SwingView extends View {
     private void advanceEndOfActorTurn(Side actor) {
         BuffState b = actor == Side.PLAYER ? playerBuff : enemyBuff;
 
-        // On ne touche plus à la furtivité ici (elle est gérée lors des attaques reçues)
+        // On ne touche plus à la furtivité ici (elle est gérée lors des attaques
+        // reçues)
 
         // Cooldowns -1 à la fin du tour de l'acteur
         b.tickCooldowns();
 
         refreshHPBars();
     }
-
-
 
     private boolean checkVictory() {
         if (liveFighter1HP <= 0 || liveFighter2HP <= 0) {
@@ -1729,7 +1825,6 @@ public class SwingView extends View {
         bouleDeFeuBtn.setText(cdB > 0 ? "Boule de Feu (CD " + cdB + ")" : "Boule de Feu");
     }
 
-
     private void setActionButtonsEnabled(boolean enabled) {
         attackBtn.setEnabled(enabled);
         surchargeBtn.setEnabled(enabled);
@@ -1755,8 +1850,10 @@ public class SwingView extends View {
             liveFighter1HPBar.setForeground(getHPColor(p1));
             liveFighter2HPBar.setForeground(getHPColor(p2));
 
-            if (p1 <= 30) liveFighter1HPBar.setString(liveFighter1HPBar.getString() + " !");
-            if (p2 <= 30) liveFighter2HPBar.setString(liveFighter2HPBar.getString() + " !");
+            if (p1 <= 30)
+                liveFighter1HPBar.setString(liveFighter1HPBar.getString() + " !");
+            if (p2 <= 30)
+                liveFighter2HPBar.setString(liveFighter2HPBar.getString() + " !");
         }
     }
 
@@ -1917,26 +2014,26 @@ public class SwingView extends View {
             super(action.getFormattedAction());
             this.action = action;
         }
-        
+
         public BattleAction getAction() {
             return action;
         }
-        
+
         @Override
         public String toString() {
             String modifiable = action.isModifiable() ? "[EDIT]" : "[FIXED]";
             return modifiable + " " + action.getFormattedAction();
         }
     }
-    
+
     // Battle history tree cell renderer
     private static class BattleHistoryTreeRenderer extends DefaultTreeCellRenderer {
         @Override
         public Component getTreeCellRendererComponent(JTree tree, Object value,
                 boolean selected, boolean expanded, boolean leaf, int row, boolean hasFocus) {
-            
+
             super.getTreeCellRendererComponent(tree, value, selected, expanded, leaf, row, hasFocus);
-            
+
             if (value instanceof BattleHistoryNode) {
                 setIcon(null); // Battle icon handled in toString
             } else if (value instanceof ActionNode) {
@@ -1946,12 +2043,10 @@ public class SwingView extends View {
                     setForeground(java.awt.Color.GRAY);
                 }
             }
-            
+
             return this;
         }
     }
-
-
 
     private void refreshHistory() {
         // Old method - now redirects to new system
@@ -1964,27 +2059,26 @@ public class SwingView extends View {
         combatLogArea.append("--- Replay complete ---\n");
     }
 
-
-    
     // New advanced battle history methods
     private void refreshBattleHistory() {
-        if (historyRootNode == null) return;
+        if (historyRootNode == null)
+            return;
         historyRootNode.removeAllChildren();
-        
+
         for (BattleHistory battle : battleHistoryManager.getAllBattles()) {
             BattleHistoryNode battleNode = new BattleHistoryNode(battle);
-            
+
             // Add action nodes
             for (BattleAction action : battle.getActions()) {
                 ActionNode actionNode = new ActionNode(action);
                 battleNode.add(actionNode);
             }
-            
+
             historyRootNode.add(battleNode);
         }
-        
+
         historyTreeModel.reload();
-        
+
         // Expand all battles by default
         for (int i = 0; i < historyRootNode.getChildCount(); i++) {
             TreePath battlePath = new TreePath(new Object[] { historyRootNode, historyRootNode.getChildAt(i) });
@@ -1998,27 +2092,27 @@ public class SwingView extends View {
         }
 
         BattleAction action = liveBattleHistory.getActions().get(currentActionIndex);
-        
+
         // Update turn counter if necessary
         if (action.getRound() > currentTurn) {
             currentTurn = action.getRound();
             liveTurnLabel.setText("Turn " + currentTurn);
         }
-        
+
         // Display the action in combat log
         String actionText = "Turn " + action.getRound() + ": " + action.getDescription();
         combatLogArea.append(actionText + "\n");
         combatLogArea.setCaretPosition(combatLogArea.getDocument().getLength());
-        
+
         // Update HP based on action type
         updateLiveActionHP(action);
         refreshHPBars();
     }
-    
+
     private void updateLiveActionHP(BattleAction action) {
         // Use the damage directly from the action
         int damage = action.getDamage();
-        
+
         if (damage > 0) {
             // Determine which fighter took damage based on target
             Character target = action.getTarget();
@@ -2036,15 +2130,14 @@ public class SwingView extends View {
                 frame,
                 "Are you sure you want to clear all battle history?",
                 "Confirm Clear",
-                JOptionPane.YES_NO_OPTION
-        );
+                JOptionPane.YES_NO_OPTION);
 
         if (result == JOptionPane.YES_OPTION) {
             battleHistoryManager.clearHistory();
             refreshBattleHistory();
         }
     }
-    
+
     private void exportSelectedBattle() {
         TreePath selectionPath = battleHistoryTree.getSelectionPath();
         if (selectionPath == null) {
@@ -2052,15 +2145,15 @@ public class SwingView extends View {
                     JOptionPane.WARNING_MESSAGE);
             return;
         }
-        
+
         DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectionPath.getLastPathComponent();
-        
+
         if (!(selectedNode instanceof BattleHistoryNode)) {
             JOptionPane.showMessageDialog(frame, "Please select a battle to export", "Invalid Selection",
                     JOptionPane.WARNING_MESSAGE);
             return;
         }
-        
+
         BattleHistory battle = ((BattleHistoryNode) selectedNode).getBattle();
         StringBuilder export = new StringBuilder();
         export.append("Battle Export: ").append(battle.getBattleName()).append("\n");
@@ -2087,14 +2180,16 @@ public class SwingView extends View {
     private void replaySelectedBattle() {
         TreePath selectionPath = battleHistoryTree.getSelectionPath();
         if (selectionPath == null) {
-            JOptionPane.showMessageDialog(frame, "Please select a battle to replay", "No Selection", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(frame, "Please select a battle to replay", "No Selection",
+                    JOptionPane.WARNING_MESSAGE);
             return;
         }
 
         DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectionPath.getLastPathComponent();
 
         if (!(selectedNode instanceof BattleHistoryNode)) {
-            JOptionPane.showMessageDialog(frame, "Please select a battle (not an action) to replay", "Invalid Selection", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(frame, "Please select a battle (not an action) to replay",
+                    "Invalid Selection", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
@@ -2107,11 +2202,10 @@ public class SwingView extends View {
                 frame,
                 battle,
                 battleHistoryManager,
-                () -> refreshBattleHistory()
-        );
+                () -> refreshBattleHistory());
         replayWindow.setVisible(true);
     }
-    
+
     private void showBattleDetails(BattleHistory battle) {
         StringBuilder details = new StringBuilder();
         details.append("Battle Details\n");
@@ -2128,13 +2222,13 @@ public class SwingView extends View {
         for (BattleAction action : battle.getActions()) {
             details.append(action.getFormattedAction()).append("\n");
         }
-        
+
         JTextArea textArea = new JTextArea(details.toString());
         textArea.setEditable(false);
         textArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
         JScrollPane scrollPane = new JScrollPane(textArea);
         scrollPane.setPreferredSize(new Dimension(600, 400));
-        
+
         JOptionPane.showMessageDialog(frame, scrollPane, "Battle Details", JOptionPane.INFORMATION_MESSAGE);
     }
 
@@ -2168,7 +2262,7 @@ public class SwingView extends View {
             }
         });
     }
-    
+
     private Character findBaseCharacter(Character character) {
         // Strip all decorators to find the base character
         Character current = character;
@@ -2194,16 +2288,17 @@ public class SwingView extends View {
 
     // ======== Tree inner classes ========
 
-
-
-
     // Compte le nombre de compétences cochées
     private int selectedSkillsCount() {
         int n = 0;
-        if (surchargeBox.isSelected()) n++;
-        if (furtiviteBox.isSelected()) n++;
-        if (soinBox.isSelected()) n++;
-        if (bouleDeFeuBox.isSelected()) n++;
+        if (surchargeBox.isSelected())
+            n++;
+        if (furtiviteBox.isSelected())
+            n++;
+        if (soinBox.isSelected())
+            n++;
+        if (bouleDeFeuBox.isSelected())
+            n++;
         return n;
     }
 
@@ -2215,8 +2310,7 @@ public class SwingView extends View {
                     frame,
                     "Un personnage ne peut avoir que 2 compétences maximum.",
                     "Sélection invalide",
-                    JOptionPane.WARNING_MESSAGE
-            );
+                    JOptionPane.WARNING_MESSAGE);
             return false;
         }
         return true;
@@ -2233,16 +2327,17 @@ public class SwingView extends View {
     }
 
     private void endPlayerTurnAndRunEnemy() {
-        advanceEndOfActorTurn(Side.PLAYER);  // CD du joueur
-        if (checkVictory()) return;
+        advanceEndOfActorTurn(Side.PLAYER); // CD du joueur
+        if (checkVictory())
+            return;
 
-        enemyTurn();                         // IA joue, enregistre ses actions
-        if (checkVictory()) return;
+        enemyTurn(); // IA joue, enregistre ses actions
+        if (checkVictory())
+            return;
 
-        advanceEndOfActorTurn(Side.ENEMY);   // CD de l’ennemi
+        advanceEndOfActorTurn(Side.ENEMY); // CD de l’ennemi
         currentTurn++;
         liveTurnLabel.setText("Tour: " + currentTurn);
     }
-
 
 }

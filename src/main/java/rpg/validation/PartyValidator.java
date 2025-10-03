@@ -3,15 +3,39 @@ package rpg.validation;
 import rpg.settings.GameSettings;
 
 public class PartyValidator extends BaseValidator {
+    private final int currentCharacterCount;
+
+    public PartyValidator() {
+        this.currentCharacterCount = 0;
+    }
+
+    public PartyValidator(int currentCharacterCount) {
+        this.currentCharacterCount = currentCharacterCount;
+    }
+
     @Override
     protected ValidationResult validateSpecific(ValidationContext context) {
-        // Ce validateur peut être utilisé pour valider l'ajout d'un personnage à une
-        // partie
-        // Pour l'instant, il s'assure juste que les règles de base sont respectées
+        GameSettings settings = GameSettings.getInstance();
+        int maxCharactersPerGroup = settings.getMaxCharactersPerGroup();
 
-        // La validation spécifique aux parties est maintenant gérée directement dans
-        // SwingView
-        // lors de l'ajout de personnages aux parties
+        if (currentCharacterCount >= maxCharactersPerGroup) {
+            return ValidationResult.failure(
+                    "Cannot add character: Maximum characters per party is " + maxCharactersPerGroup +
+                            ". This party already has " + currentCharacterCount + " characters.");
+        }
+
+        return ValidationResult.success();
+    }
+
+    public ValidationResult validatePartySettings(int actualCharacterCount) {
+        GameSettings settings = GameSettings.getInstance();
+        int maxCharactersPerGroup = settings.getMaxCharactersPerGroup();
+
+        if (actualCharacterCount > maxCharactersPerGroup) {
+            return ValidationResult.failure(
+                    "Party validation failed: Has " + actualCharacterCount +
+                            " characters but maximum allowed is " + maxCharactersPerGroup);
+        }
 
         return ValidationResult.success();
     }
