@@ -11,6 +11,8 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 import javax.swing.BorderFactory;
@@ -49,17 +51,18 @@ import rpg.composite.Army;
 import rpg.core.Character;
 import rpg.core.CombatEngine;
 import rpg.dao.DAO;
+import rpg.decorator.BouleDeFeu;
 import rpg.decorator.CharacterDecorator;
-import rpg.decorator.Surcharge;
 import rpg.decorator.Furtivite;
 import rpg.decorator.Soin;
-import rpg.decorator.BouleDeFeu;
-
+import rpg.decorator.Surcharge;
 import rpg.history.AdvancedBattleHistoryManager;
 import rpg.history.BattleAction;
 import rpg.history.BattleHistory;
 import rpg.observer.EventBus;
 import rpg.settings.GameSettings;
+import rpg.validation.SettingsValidationTest;
+import rpg.validation.ValidationResult;
 
 public class SwingView extends View {
 
@@ -500,56 +503,29 @@ public class SwingView extends View {
     }
 
     private void applySettings() {
-        // Si tu as bien rpg.settings.GameSettings, on pousse les valeurs UI dedans.
+        // Lire les nouvelles valeurs depuis l'UI
         GameSettings settings = GameSettings.getInstance();
         int newMaxStatPoints = (Integer) maxStatPointsSpinner.getValue();
         int newMaxCharactersPerGroup = (Integer) maxCharactersSpinner.getValue();
         int newMaxGroupsPerArmy = (Integer) maxGroupsSpinner.getValue();
 
-        // Valider les nouvelles limites contre l'état actuel
-        StringBuilder violations = new StringBuilder();
-
-        // Vérifier les personnages existants contre la nouvelle limite de stats
-        for (Character c : dao.findAll()) {
-            int totalStats = c.getStrength() + c.getAgility() + c.getIntelligence();
-            if (totalStats > newMaxStatPoints) {
-                violations.append("- Character '").append(c.getName())
-                        .append("' has ").append(totalStats).append(" total stats but new limit is ")
-                        .append(newMaxStatPoints).append("\n");
-            }
-        }
-
-        // Vérifier les armées existantes contre les nouvelles limites
-        for (int i = 0; i < rootNode.getChildCount(); i++) {
-            DefaultMutableTreeNode armyNode = (DefaultMutableTreeNode) rootNode.getChildAt(i);
-            if (armyNode instanceof ArmyTreeNode) {
-                int partyCount = armyNode.getChildCount();
-                if (partyCount > newMaxGroupsPerArmy) {
-                    violations.append("- Army '").append(armyNode.getUserObject())
-                            .append("' has ").append(partyCount).append(" parties but new limit is ")
-                            .append(newMaxGroupsPerArmy).append("\n");
-                }
-
-                // Vérifier chaque partie dans cette armée
-                for (int j = 0; j < armyNode.getChildCount(); j++) {
-                    DefaultMutableTreeNode partyNode = (DefaultMutableTreeNode) armyNode.getChildAt(j);
-                    if (partyNode instanceof PartyTreeNode) {
-                        int characterCount = partyNode.getChildCount();
-                        if (characterCount > newMaxCharactersPerGroup) {
-                            violations.append("- Party '").append(partyNode.getUserObject())
-                                    .append("' has ").append(characterCount).append(" characters but new limit is ")
-                                    .append(newMaxCharactersPerGroup).append("\n");
-                        }
-                    }
-                }
-            }
-        }
+        // Utiliser le validateur centralisé au lieu de dupliquer la logique
+        List<Character> allCharacters = dao.findAll();
+        List<Army> allArmies = extractArmiesFromTree();
+        
+        ValidationResult validationResult = SettingsValidationTest.validateAllAgainstNewSettings(
+                allCharacters,
+                allArmies,
+                newMaxStatPoints,
+                newMaxCharactersPerGroup,
+                newMaxGroupsPerArmy);
 
         // Si des violations existent, afficher un avertissement
-        if (violations.length() > 0) {
+        if (!validationResult.isValid()) {
+            String violationsText = String.join("\n", validationResult.getErrors());
             String message = "Warning: The following elements violate the new settings:\n\n" +
-                    violations.toString() +
-                    "\nDo you want to apply the settings anyway?";
+                    violationsText +
+                    "\n\nDo you want to apply the settings anyway?";
 
             int choice = JOptionPane.showConfirmDialog(
                     frame,
@@ -569,12 +545,34 @@ public class SwingView extends View {
         settings.setMaxGroupsPerArmy(newMaxGroupsPerArmy);
 
         String successMessage = "Settings applied successfully";
-        if (violations.length() > 0) {
+        if (!validationResult.isValid()) {
             successMessage += "\n\nNote: Some existing elements exceed the new limits.";
         }
 
         JOptionPane.showMessageDialog(frame, successMessage, "Settings", JOptionPane.INFORMATION_MESSAGE);
         eventBus.notifyObservers("SETTINGS_CHANGED", "Settings updated");
+    }
+
+    /**
+     * Extrait toutes les armées de l'arbre hiérarchique.
+     * Helper pour la validation centralisée des paramètres.
+     */
+    private List<Army> extractArmiesFromTree() {
+        List<Army> armies = new ArrayList<>();
+        
+        if (rootNode == null) {
+            return armies;
+        }
+        
+        for (int i = 0; i < rootNode.getChildCount(); i++) {
+            DefaultMutableTreeNode armyNode = (DefaultMutableTreeNode) rootNode.getChildAt(i);
+            if (armyNode instanceof ArmyTreeNode) {
+                Army army = ((ArmyTreeNode) armyNode).getArmy();
+                armies.add(army);
+            }
+        }
+        
+        return armies;
     }
 
     private void createSettingsTab() {
