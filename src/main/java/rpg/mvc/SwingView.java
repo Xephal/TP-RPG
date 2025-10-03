@@ -11,7 +11,6 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -42,7 +41,6 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
-
 import rpg.builder.InvalidCharacterException;
 import rpg.composite.Army;
 import rpg.core.Character;
@@ -59,6 +57,7 @@ import rpg.observer.EventBus;
 import rpg.settings.GameSettings;
 
 public class SwingView extends View {
+
     private final GameController controller;
     private final EventBus eventBus;
     private final DAO<Character> dao;
@@ -118,7 +117,11 @@ public class SwingView extends View {
     private JCheckBox fireResistanceBox;
     private JCheckBox telepathyBox;
 
-    public SwingView(GameController controller, EventBus eventBus, DAO<Character> dao) {
+    public SwingView(
+        GameController controller,
+        EventBus eventBus,
+        DAO<Character> dao
+    ) {
         super("SwingView");
         this.controller = controller;
         this.eventBus = eventBus;
@@ -148,24 +151,32 @@ public class SwingView extends View {
     private void deleteSelectedCharacter() {
         rpg.core.Character selected = characterList.getSelectedValue();
         if (selected == null) {
-            JOptionPane.showMessageDialog(frame, "Select a character to delete.", "No Selection",
-                    JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(
+                frame,
+                "Select a character to delete.",
+                "No Selection",
+                JOptionPane.WARNING_MESSAGE
+            );
             return;
         }
 
         int confirm = JOptionPane.showConfirmDialog(
-                frame,
-                "Delete '" + selected.getName() + "' ?",
-                "Confirm Deletion",
-                JOptionPane.YES_NO_OPTION);
-        if (confirm != JOptionPane.YES_OPTION)
-            return;
+            frame,
+            "Delete '" + selected.getName() + "' ?",
+            "Confirm Deletion",
+            JOptionPane.YES_NO_OPTION
+        );
+        if (confirm != JOptionPane.YES_OPTION) return;
 
         try {
             boolean ok = dao.remove(selected);
             if (!ok) {
-                JOptionPane.showMessageDialog(frame, "Deletion failed (not found).", "Delete",
-                        JOptionPane.WARNING_MESSAGE);
+                JOptionPane.showMessageDialog(
+                    frame,
+                    "Deletion failed (not found).",
+                    "Delete",
+                    JOptionPane.WARNING_MESSAGE
+                );
                 return;
             }
 
@@ -177,11 +188,19 @@ public class SwingView extends View {
             // Supprimer aussi du tree "Armies"
             removeCharacterFromArmyTree(selected);
 
-            JOptionPane.showMessageDialog(frame, "Character deleted.", "Delete", JOptionPane.INFORMATION_MESSAGE);
-
+            JOptionPane.showMessageDialog(
+                frame,
+                "Character deleted.",
+                "Delete",
+                JOptionPane.INFORMATION_MESSAGE
+            );
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(frame, "Error while deleting: " + ex.getMessage(), "Error",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(
+                frame,
+                "Error while deleting: " + ex.getMessage(),
+                "Error",
+                JOptionPane.ERROR_MESSAGE
+            );
         }
     }
 
@@ -274,7 +293,9 @@ public class SwingView extends View {
 
         // Decorators section
         JPanel decoratorPanel = new JPanel();
-        decoratorPanel.setLayout(new BoxLayout(decoratorPanel, BoxLayout.Y_AXIS));
+        decoratorPanel.setLayout(
+            new BoxLayout(decoratorPanel, BoxLayout.Y_AXIS)
+        );
         decoratorPanel.setBorder(new TitledBorder("Decorators"));
 
         invisibilityBox = new JCheckBox("Invisibility");
@@ -404,21 +425,32 @@ public class SwingView extends View {
         gbc.gridy = 0;
         panel.add(new JLabel("Max Stat Points:"), gbc);
         gbc.gridx = 1;
-        maxStatPointsSpinner = new JSpinner(new SpinnerNumberModel(settings.getMaxStatPoints(), 1, 100, 1));
+        maxStatPointsSpinner = new JSpinner(
+            new SpinnerNumberModel(settings.getMaxStatPoints(), 1, 100, 1)
+        );
         panel.add(maxStatPointsSpinner, gbc);
 
         gbc.gridx = 0;
         gbc.gridy = 1;
         panel.add(new JLabel("Max Characters Per Group:"), gbc);
         gbc.gridx = 1;
-        maxCharactersSpinner = new JSpinner(new SpinnerNumberModel(settings.getMaxCharactersPerGroup(), 1, 50, 1));
+        maxCharactersSpinner = new JSpinner(
+            new SpinnerNumberModel(
+                settings.getMaxCharactersPerGroup(),
+                1,
+                50,
+                1
+            )
+        );
         panel.add(maxCharactersSpinner, gbc);
 
         gbc.gridx = 0;
         gbc.gridy = 2;
         panel.add(new JLabel("Max Groups Per Army:"), gbc);
         gbc.gridx = 1;
-        maxGroupsSpinner = new JSpinner(new SpinnerNumberModel(settings.getMaxGroupsPerArmy(), 1, 20, 1));
+        maxGroupsSpinner = new JSpinner(
+            new SpinnerNumberModel(settings.getMaxGroupsPerArmy(), 1, 20, 1)
+        );
         panel.add(maxGroupsSpinner, gbc);
 
         gbc.gridx = 0;
@@ -434,43 +466,24 @@ public class SwingView extends View {
     private void removeCharacterFromArmyTree(Character toRemove) {
         // Parcourt l’arbre et supprime les CharacterTreeNode qui portent ce nom
         for (int i = 0; i < rootNode.getChildCount(); i++) {
-            DefaultMutableTreeNode armyNode = (DefaultMutableTreeNode) rootNode.getChildAt(i);
+            DefaultMutableTreeNode armyNode =
+                (DefaultMutableTreeNode) rootNode.getChildAt(i);
             for (int j = 0; j < armyNode.getChildCount(); j++) {
-                DefaultMutableTreeNode partyNode = (DefaultMutableTreeNode) armyNode.getChildAt(j);
+                DefaultMutableTreeNode partyNode =
+                    (DefaultMutableTreeNode) armyNode.getChildAt(j);
                 for (int k = partyNode.getChildCount() - 1; k >= 0; k--) {
-                    DefaultMutableTreeNode child = (DefaultMutableTreeNode) partyNode.getChildAt(k);
-                    if (child instanceof CharacterTreeNode ctn
-                            && ctn.getCharacter().getName().equals(toRemove.getName())) {
+                    DefaultMutableTreeNode child =
+                        (DefaultMutableTreeNode) partyNode.getChildAt(k);
+                    if (
+                        child instanceof CharacterTreeNode ctn &&
+                        ctn.getCharacter().getName().equals(toRemove.getName())
+                    ) {
                         partyNode.remove(k);
                     }
                 }
             }
         }
         treeModel.reload(rootNode);
-    }
-
-    private void updateCharacterInArmyTree(Character updatedCharacter) {
-        // Parcourt l'arbre et met à jour les CharacterTreeNode qui portent ce nom
-        boolean updated = false;
-        for (int i = 0; i < rootNode.getChildCount(); i++) {
-            DefaultMutableTreeNode armyNode = (DefaultMutableTreeNode) rootNode.getChildAt(i);
-            for (int j = 0; j < armyNode.getChildCount(); j++) {
-                DefaultMutableTreeNode partyNode = (DefaultMutableTreeNode) armyNode.getChildAt(j);
-                for (int k = 0; k < partyNode.getChildCount(); k++) {
-                    DefaultMutableTreeNode child = (DefaultMutableTreeNode) partyNode.getChildAt(k);
-                    if (child instanceof CharacterTreeNode ctn
-                            && ctn.getCharacter().getName().equals(updatedCharacter.getName())) {
-                        // Remplacer le nœud par un nouveau avec le personnage mis à jour
-                        partyNode.remove(k);
-                        partyNode.insert(new CharacterTreeNode(updatedCharacter), k);
-                        updated = true;
-                    }
-                }
-            }
-        }
-        if (updated) {
-            treeModel.reload(rootNode);
-        }
     }
 
     private void createArmyTab() {
@@ -513,21 +526,27 @@ public class SwingView extends View {
         hierarchyTree.setCellRenderer(new CustomTreeCellRenderer());
 
         // Add mouse listener for double-click actions
-        hierarchyTree.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2) {
-                    handleDoubleClick();
+        hierarchyTree.addMouseListener(
+            new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    if (e.getClickCount() == 2) {
+                        handleDoubleClick();
+                    }
                 }
             }
-        });
+        );
 
         JScrollPane treeScroll = new JScrollPane(hierarchyTree);
         treeScroll.setBorder(new TitledBorder("Army Hierarchy"));
 
         // Instructions panel
         JPanel instructionsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        instructionsPanel.add(new JLabel("Double-click to expand/collapse. Right-click for context menu."));
+        instructionsPanel.add(
+            new JLabel(
+                "Double-click to expand/collapse. Right-click for context menu."
+            )
+        );
 
         panel.add(topPanel, BorderLayout.NORTH);
         panel.add(treeScroll, BorderLayout.CENTER);
@@ -540,7 +559,12 @@ public class SwingView extends View {
     private void createArmyInTree() {
         String name = armyNameField.getText().trim();
         if (name.isEmpty()) {
-            JOptionPane.showMessageDialog(frame, "Please enter army name", "Input Error", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(
+                frame,
+                "Please enter army name",
+                "Input Error",
+                JOptionPane.WARNING_MESSAGE
+            );
             return;
         }
 
@@ -559,33 +583,35 @@ public class SwingView extends View {
     private void addPartyToSelected() {
         TreePath selectionPath = hierarchyTree.getSelectionPath();
         if (selectionPath == null) {
-            JOptionPane.showMessageDialog(frame, "Please select an Army to add a Party to", "No Selection",
-                    JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(
+                frame,
+                "Please select an Army to add a Party to",
+                "No Selection",
+                JOptionPane.WARNING_MESSAGE
+            );
             return;
         }
 
-        DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectionPath.getLastPathComponent();
+        DefaultMutableTreeNode selectedNode =
+            (DefaultMutableTreeNode) selectionPath.getLastPathComponent();
 
         // Can only add parties to Army nodes
         if (!(selectedNode instanceof ArmyTreeNode)) {
-            JOptionPane.showMessageDialog(frame, "Parties can only be added to Armies", "Invalid Selection",
-                    JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(
+                frame,
+                "Parties can only be added to Armies",
+                "Invalid Selection",
+                JOptionPane.WARNING_MESSAGE
+            );
             return;
         }
 
-        // Check max groups per army limit
-        int currentPartyCount = selectedNode.getChildCount();
-        int maxGroupsPerArmy = GameSettings.getInstance().getMaxGroupsPerArmy();
-        if (currentPartyCount >= maxGroupsPerArmy) {
-            JOptionPane.showMessageDialog(frame,
-                    "Cannot add party: Maximum parties per army is " + maxGroupsPerArmy +
-                            ". This army already has " + currentPartyCount + " parties.",
-                    "Limit Exceeded", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        String partyName = JOptionPane.showInputDialog(frame, "Enter Party name:", "Create Party",
-                JOptionPane.PLAIN_MESSAGE);
+        String partyName = JOptionPane.showInputDialog(
+            frame,
+            "Enter Party name:",
+            "Create Party",
+            JOptionPane.PLAIN_MESSAGE
+        );
         if (partyName != null && !partyName.trim().isEmpty()) {
             PartyTreeNode partyNode = new PartyTreeNode(partyName.trim());
             selectedNode.add(partyNode);
@@ -602,51 +628,56 @@ public class SwingView extends View {
     private void addCharacterToSelected() {
         TreePath selectionPath = hierarchyTree.getSelectionPath();
         if (selectionPath == null) {
-            JOptionPane.showMessageDialog(frame, "Please select a Party to add a Character to", "No Selection",
-                    JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(
+                frame,
+                "Please select a Party to add a Character to",
+                "No Selection",
+                JOptionPane.WARNING_MESSAGE
+            );
             return;
         }
 
-        DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectionPath.getLastPathComponent();
+        DefaultMutableTreeNode selectedNode =
+            (DefaultMutableTreeNode) selectionPath.getLastPathComponent();
 
         // Can only add characters to Party nodes
         if (!(selectedNode instanceof PartyTreeNode)) {
-            JOptionPane.showMessageDialog(frame, "Characters can only be added to Parties", "Invalid Selection",
-                    JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        // Check max characters per group limit
-        int currentCharacterCount = selectedNode.getChildCount();
-        int maxCharactersPerGroup = GameSettings.getInstance().getMaxCharactersPerGroup();
-        if (currentCharacterCount >= maxCharactersPerGroup) {
-            JOptionPane.showMessageDialog(frame,
-                    "Cannot add character: Maximum characters per party is " + maxCharactersPerGroup +
-                            ". This party already has " + currentCharacterCount + " characters.",
-                    "Limit Exceeded", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(
+                frame,
+                "Characters can only be added to Parties",
+                "Invalid Selection",
+                JOptionPane.WARNING_MESSAGE
+            );
             return;
         }
 
         // Show character selection dialog
         java.util.List<Character> availableCharacters = dao.findAll();
         if (availableCharacters.isEmpty()) {
-            JOptionPane.showMessageDialog(frame, "No characters available. Create some characters first!",
-                    "No Characters", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(
+                frame,
+                "No characters available. Create some characters first!",
+                "No Characters",
+                JOptionPane.WARNING_MESSAGE
+            );
             return;
         }
 
         Character[] characters = availableCharacters.toArray(new Character[0]);
         Character selectedCharacter = (Character) JOptionPane.showInputDialog(
-                frame,
-                "Select a character to add:",
-                "Add Character",
-                JOptionPane.PLAIN_MESSAGE,
-                null,
-                characters,
-                characters[0]);
+            frame,
+            "Select a character to add:",
+            "Add Character",
+            JOptionPane.PLAIN_MESSAGE,
+            null,
+            characters,
+            characters[0]
+        );
 
         if (selectedCharacter != null) {
-            CharacterTreeNode characterNode = new CharacterTreeNode(selectedCharacter);
+            CharacterTreeNode characterNode = new CharacterTreeNode(
+                selectedCharacter
+            );
             selectedNode.add(characterNode);
             treeModel.reload(selectedNode);
 
@@ -661,28 +692,41 @@ public class SwingView extends View {
     private void removeSelectedNode() {
         TreePath selectionPath = hierarchyTree.getSelectionPath();
         if (selectionPath == null) {
-            JOptionPane.showMessageDialog(frame, "Please select a node to remove", "No Selection",
-                    JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(
+                frame,
+                "Please select a node to remove",
+                "No Selection",
+                JOptionPane.WARNING_MESSAGE
+            );
             return;
         }
 
-        DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectionPath.getLastPathComponent();
+        DefaultMutableTreeNode selectedNode =
+            (DefaultMutableTreeNode) selectionPath.getLastPathComponent();
 
         // Cannot remove root
         if (selectedNode == rootNode) {
-            JOptionPane.showMessageDialog(frame, "Cannot remove the root node", "Invalid Operation",
-                    JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(
+                frame,
+                "Cannot remove the root node",
+                "Invalid Operation",
+                JOptionPane.WARNING_MESSAGE
+            );
             return;
         }
 
         int result = JOptionPane.showConfirmDialog(
-                frame,
-                "Are you sure you want to remove '" + selectedNode.getUserObject() + "'?",
-                "Confirm Removal",
-                JOptionPane.YES_NO_OPTION);
+            frame,
+            "Are you sure you want to remove '" +
+                selectedNode.getUserObject() +
+                "'?",
+            "Confirm Removal",
+            JOptionPane.YES_NO_OPTION
+        );
 
         if (result == JOptionPane.YES_OPTION) {
-            DefaultMutableTreeNode parent = (DefaultMutableTreeNode) selectedNode.getParent();
+            DefaultMutableTreeNode parent =
+                (DefaultMutableTreeNode) selectedNode.getParent();
             parent.remove(selectedNode);
             treeModel.reload(parent);
 
@@ -708,7 +752,9 @@ public class SwingView extends View {
 
         // Expand all armies by default
         for (int i = 0; i < rootNode.getChildCount(); i++) {
-            TreePath armyPath = new TreePath(new Object[] { rootNode, rootNode.getChildAt(i) });
+            TreePath armyPath = new TreePath(
+                new Object[] { rootNode, rootNode.getChildAt(i) }
+            );
             hierarchyTree.expandPath(armyPath);
         }
     }
@@ -727,14 +773,16 @@ public class SwingView extends View {
         battleHistoryTree.setCellRenderer(new BattleHistoryTreeRenderer());
 
         // Add double-click listener for battle details
-        battleHistoryTree.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2) {
-                    handleBattleDoubleClick();
+        battleHistoryTree.addMouseListener(
+            new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    if (e.getClickCount() == 2) {
+                        handleBattleDoubleClick();
+                    }
                 }
             }
-        });
+        );
 
         JScrollPane treeScroll = new JScrollPane(battleHistoryTree);
         treeScroll.setBorder(new TitledBorder("Battle History"));
@@ -758,8 +806,11 @@ public class SwingView extends View {
 
         // Instructions
         JPanel instructionsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        instructionsPanel.add(new JLabel(
-                "Double-click battle to see details. Select battle and click 'Replay' for interactive mode."));
+        instructionsPanel.add(
+            new JLabel(
+                "Double-click battle to see details. Select battle and click 'Replay' for interactive mode."
+            )
+        );
 
         panel.add(treeScroll, BorderLayout.CENTER);
         panel.add(buttonPanel, BorderLayout.NORTH);
@@ -836,8 +887,12 @@ public class SwingView extends View {
                 if (temporaryCharacter != null) {
                     // Save the temporary character with all decorators
                     dao.save(temporaryCharacter);
-                    JOptionPane.showMessageDialog(frame, "Character created successfully with decorators!", "Success",
-                            JOptionPane.INFORMATION_MESSAGE);
+                    JOptionPane.showMessageDialog(
+                        frame,
+                        "Character created successfully with decorators!",
+                        "Success",
+                        JOptionPane.INFORMATION_MESSAGE
+                    );
                 } else {
                     // Create character with selected decorators
                     String name = nameField.getText().trim();
@@ -846,16 +901,31 @@ public class SwingView extends View {
                     int intel = (Integer) intSpinner.getValue();
 
                     if (name.isEmpty()) {
-                        JOptionPane.showMessageDialog(frame, "Please enter a character name", "Validation Error",
-                                JOptionPane.WARNING_MESSAGE);
+                        JOptionPane.showMessageDialog(
+                            frame,
+                            "Please enter a character name",
+                            "Validation Error",
+                            JOptionPane.WARNING_MESSAGE
+                        );
                         return;
                     }
 
-                    Character baseCharacter = controller.buildCharacter(name, str, agi, intel);
-                    Character characterWithDecorators = applySelectedDecorators(baseCharacter);
+                    Character baseCharacter = controller.buildCharacter(
+                        name,
+                        str,
+                        agi,
+                        intel
+                    );
+                    Character characterWithDecorators = applySelectedDecorators(
+                        baseCharacter
+                    );
                     dao.save(characterWithDecorators);
-                    JOptionPane.showMessageDialog(frame, "Character created successfully!", "Success",
-                            JOptionPane.INFORMATION_MESSAGE);
+                    JOptionPane.showMessageDialog(
+                        frame,
+                        "Character created successfully!",
+                        "Success",
+                        JOptionPane.INFORMATION_MESSAGE
+                    );
                 }
                 refreshCharacterList();
                 clearCharacterForm();
@@ -866,28 +936,42 @@ public class SwingView extends View {
                 int intel = (Integer) intSpinner.getValue();
 
                 // Create updated character with new stats
-                Character baseCharacter = findBaseCharacter(currentEditingCharacter);
-                Character newBaseCharacter = controller.buildCharacter(baseCharacter.getName(), str, agi, intel);
+                Character baseCharacter = findBaseCharacter(
+                    currentEditingCharacter
+                );
+                Character newBaseCharacter = controller.buildCharacter(
+                    baseCharacter.getName(),
+                    str,
+                    agi,
+                    intel
+                );
 
                 // Apply selected decorators
-                Character newCharacterWithDecorators = applySelectedDecorators(newBaseCharacter);
+                Character newCharacterWithDecorators = applySelectedDecorators(
+                    newBaseCharacter
+                );
 
                 // Update in database
                 dao.update(currentEditingCharacter, newCharacterWithDecorators);
                 currentEditingCharacter = newCharacterWithDecorators;
 
-                // Update character in army tree as well
-                updateCharacterInArmyTree(newCharacterWithDecorators);
-
-                JOptionPane.showMessageDialog(frame, "Character updated successfully!", "Success",
-                        JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(
+                    frame,
+                    "Character updated successfully!",
+                    "Success",
+                    JOptionPane.INFORMATION_MESSAGE
+                );
                 refreshCharacterList();
 
                 // Maintain selection after update
                 if (currentEditingCharacter != null) {
                     for (int i = 0; i < characterListModel.size(); i++) {
                         Character character = characterListModel.get(i);
-                        if (character.getName().equals(currentEditingCharacter.getName())) {
+                        if (
+                            character
+                                .getName()
+                                .equals(currentEditingCharacter.getName())
+                        ) {
                             characterList.setSelectedIndex(i);
                             loadCharacterToEdit(character);
                             break;
@@ -895,9 +979,13 @@ public class SwingView extends View {
                     }
                 }
             }
-
         } catch (InvalidCharacterException e) {
-            JOptionPane.showMessageDialog(frame, "Error: " + e.getMessage(), "Save Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(
+                frame,
+                "Error: " + e.getMessage(),
+                "Save Error",
+                JOptionPane.ERROR_MESSAGE
+            );
         }
     }
 
@@ -937,7 +1025,10 @@ public class SwingView extends View {
     private void updateDecoratorCheckboxes(Character character) {
         // Check which decorators are applied
         boolean hasInvisibility = hasDecorator(character, Invisibility.class);
-        boolean hasFireResistance = hasDecorator(character, FireResistance.class);
+        boolean hasFireResistance = hasDecorator(
+            character,
+            FireResistance.class
+        );
         boolean hasTelepathy = hasDecorator(character, Telepathy.class);
 
         // Temporarily disable events to avoid recursive calls
@@ -973,27 +1064,41 @@ public class SwingView extends View {
             if (temporaryCharacter == null) {
                 String name = nameField.getText().trim();
                 if (name.isEmpty()) {
-                    JOptionPane.showMessageDialog(frame, "Please enter a character name first", "Name Required",
-                            JOptionPane.WARNING_MESSAGE);
+                    JOptionPane.showMessageDialog(
+                        frame,
+                        "Please enter a character name first",
+                        "Name Required",
+                        JOptionPane.WARNING_MESSAGE
+                    );
                     return;
                 }
                 int str = (Integer) strSpinner.getValue();
                 int agi = (Integer) agiSpinner.getValue();
                 int intel = (Integer) intSpinner.getValue();
 
-                temporaryCharacter = controller.buildCharacter(name, str, agi, intel);
+                temporaryCharacter = controller.buildCharacter(
+                    name,
+                    str,
+                    agi,
+                    intel
+                );
             }
 
             // Get base character without decorators
             Character baseCharacter = findBaseCharacter(temporaryCharacter);
 
             // Apply selected decorators
-            Character decoratedCharacter = applySelectedDecorators(baseCharacter);
+            Character decoratedCharacter = applySelectedDecorators(
+                baseCharacter
+            );
             temporaryCharacter = decoratedCharacter;
-
         } catch (InvalidCharacterException e) {
-            JOptionPane.showMessageDialog(frame, "Error creating character: " + e.getMessage(), "Creation Error",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(
+                frame,
+                "Error creating character: " + e.getMessage(),
+                "Creation Error",
+                JOptionPane.ERROR_MESSAGE
+            );
         }
     }
 
@@ -1005,31 +1110,44 @@ public class SwingView extends View {
             int intel = (Integer) intSpinner.getValue();
 
             // Create new base character with current stats
-            Character baseCharacter = findBaseCharacter(currentEditingCharacter);
-            Character newBaseCharacter = controller.buildCharacter(baseCharacter.getName(), str, agi, intel);
+            Character baseCharacter = findBaseCharacter(
+                currentEditingCharacter
+            );
+            Character newBaseCharacter = controller.buildCharacter(
+                baseCharacter.getName(),
+                str,
+                agi,
+                intel
+            );
 
             // Apply selected decorators
-            Character newCharacterWithDecorators = applySelectedDecorators(newBaseCharacter);
+            Character newCharacterWithDecorators = applySelectedDecorators(
+                newBaseCharacter
+            );
 
             // Update in database
             dao.update(currentEditingCharacter, newCharacterWithDecorators);
             currentEditingCharacter = newCharacterWithDecorators;
 
-            // Update character in army tree as well
-            updateCharacterInArmyTree(newCharacterWithDecorators);
-
             // Update the character list model without losing selection
             for (int i = 0; i < characterListModel.size(); i++) {
                 Character character = characterListModel.get(i);
-                if (character.getName().equals(newCharacterWithDecorators.getName())) {
+                if (
+                    character
+                        .getName()
+                        .equals(newCharacterWithDecorators.getName())
+                ) {
                     characterListModel.set(i, newCharacterWithDecorators);
                     break;
                 }
             }
-
         } catch (InvalidCharacterException e) {
-            JOptionPane.showMessageDialog(frame, "Error updating character: " + e.getMessage(), "Update Error",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(
+                frame,
+                "Error updating character: " + e.getMessage(),
+                "Update Error",
+                JOptionPane.ERROR_MESSAGE
+            );
         }
     }
 
@@ -1054,8 +1172,12 @@ public class SwingView extends View {
         Character f2 = (Character) fighter2Combo.getSelectedItem();
 
         if (f1 == null || f2 == null) {
-            JOptionPane.showMessageDialog(frame, "Please select two fighters", "Combat Error",
-                    JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(
+                frame,
+                "Please select two fighters",
+                "Combat Error",
+                JOptionPane.WARNING_MESSAGE
+            );
             return;
         }
 
@@ -1086,8 +1208,14 @@ public class SwingView extends View {
         combatLogArea.setCaretPosition(combatLogArea.getDocument().getLength());
 
         // Initialize HP values (same formula as CombatEngine)
-        liveFighter1MaxHP = Math.max(10, f1.getStrength() * 10 + f1.getIntelligence() * 2);
-        liveFighter2MaxHP = Math.max(10, f2.getStrength() * 10 + f2.getIntelligence() * 2);
+        liveFighter1MaxHP = Math.max(
+            10,
+            f1.getStrength() * 10 + f1.getIntelligence() * 2
+        );
+        liveFighter2MaxHP = Math.max(
+            10,
+            f2.getStrength() * 10 + f2.getIntelligence() * 2
+        );
         liveFighter1HP = liveFighter1MaxHP;
         liveFighter2HP = liveFighter2MaxHP;
 
@@ -1113,32 +1241,57 @@ public class SwingView extends View {
 
         // Extract HP values from action description
         // Format: "Q attacks C for 5 damage (hpA=55, hpB=51)"
-        if (actionDescription.contains("hpA=") && actionDescription.contains("hpB=")) {
+        if (
+            actionDescription.contains("hpA=") &&
+            actionDescription.contains("hpB=")
+        ) {
             try {
                 // Extract hpA
                 int hpAStart = actionDescription.indexOf("hpA=") + 4;
                 int hpAEnd = actionDescription.indexOf(",", hpAStart);
-                if (hpAEnd == -1)
-                    hpAEnd = actionDescription.indexOf(")", hpAStart);
-                liveFighter1HP = Integer.parseInt(actionDescription.substring(hpAStart, hpAEnd));
+                if (hpAEnd == -1) hpAEnd = actionDescription.indexOf(
+                    ")",
+                    hpAStart
+                );
+                liveFighter1HP = Integer.parseInt(
+                    actionDescription.substring(hpAStart, hpAEnd)
+                );
 
                 // Extract hpB
                 int hpBStart = actionDescription.indexOf("hpB=") + 4;
                 int hpBEnd = actionDescription.indexOf(")", hpBStart);
-                liveFighter2HP = Integer.parseInt(actionDescription.substring(hpBStart, hpBEnd));
+                liveFighter2HP = Integer.parseInt(
+                    actionDescription.substring(hpBStart, hpBEnd)
+                );
 
                 // Update HP bars
                 liveFighter1HPBar.setValue(liveFighter1HP);
-                liveFighter1HPBar.setString(liveFighter1HP + " / " + liveFighter1MaxHP);
-                liveFighter1HPBar.setForeground(liveFighter1HP > liveFighter1MaxHP * 0.3 ? Color.GREEN : Color.RED);
+                liveFighter1HPBar.setString(
+                    liveFighter1HP + " / " + liveFighter1MaxHP
+                );
+                liveFighter1HPBar.setForeground(
+                    liveFighter1HP > liveFighter1MaxHP * 0.3
+                        ? Color.GREEN
+                        : Color.RED
+                );
 
                 liveFighter2HPBar.setValue(liveFighter2HP);
-                liveFighter2HPBar.setString(liveFighter2HP + " / " + liveFighter2MaxHP);
-                liveFighter2HPBar.setForeground(liveFighter2HP > liveFighter2MaxHP * 0.3 ? Color.GREEN : Color.RED);
-
-            } catch (NumberFormatException | StringIndexOutOfBoundsException e) {
+                liveFighter2HPBar.setString(
+                    liveFighter2HP + " / " + liveFighter2MaxHP
+                );
+                liveFighter2HPBar.setForeground(
+                    liveFighter2HP > liveFighter2MaxHP * 0.3
+                        ? Color.GREEN
+                        : Color.RED
+                );
+            } catch (
+                NumberFormatException
+                | StringIndexOutOfBoundsException e
+            ) {
                 // Si l'extraction échoue, on continue sans mettre à jour les HP
-                System.err.println("Could not extract HP from: " + actionDescription);
+                System.err.println(
+                    "Could not extract HP from: " + actionDescription
+                );
             }
         }
     }
@@ -1146,7 +1299,12 @@ public class SwingView extends View {
     private void createArmy() {
         String name = armyNameField.getText().trim();
         if (name.isEmpty()) {
-            JOptionPane.showMessageDialog(frame, "Please enter army name", "Input Error", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(
+                frame,
+                "Please enter army name",
+                "Input Error",
+                JOptionPane.WARNING_MESSAGE
+            );
             return;
         }
 
@@ -1156,12 +1314,17 @@ public class SwingView extends View {
         eventBus.notifyObservers("ARMY_CREATED", army.getName());
 
         // Suggest using the new tree interface
-        JOptionPane.showMessageDialog(frame, "Army created! Use the new Army tab for hierarchical management.",
-                "Success", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(
+            frame,
+            "Army created! Use the new Army tab for hierarchical management.",
+            "Success",
+            JOptionPane.INFORMATION_MESSAGE
+        );
     }
 
     // Custom tree node classes
     private static class ArmyTreeNode extends DefaultMutableTreeNode {
+
         private final Army army;
 
         public ArmyTreeNode(Army army) {
@@ -1176,7 +1339,15 @@ public class SwingView extends View {
         @Override
         public String toString() {
             int totalPower = calculateTotalPower();
-            return "[ARMY] " + army.getName() + " (" + getChildCount() + " parties, Power: " + totalPower + ")";
+            return (
+                "[ARMY] " +
+                army.getName() +
+                " (" +
+                getChildCount() +
+                " parties, Power: " +
+                totalPower +
+                ")"
+            );
         }
 
         private int calculateTotalPower() {
@@ -1192,6 +1363,7 @@ public class SwingView extends View {
     }
 
     private static class PartyTreeNode extends DefaultMutableTreeNode {
+
         private final String partyName;
 
         public PartyTreeNode(String partyName) {
@@ -1206,7 +1378,15 @@ public class SwingView extends View {
         @Override
         public String toString() {
             int totalPower = calculateTotalPower();
-            return "[PARTY] " + partyName + " (" + getChildCount() + " characters, Power: " + totalPower + ")";
+            return (
+                "[PARTY] " +
+                partyName +
+                " (" +
+                getChildCount() +
+                " characters, Power: " +
+                totalPower +
+                ")"
+            );
         }
 
         public int calculateTotalPower() {
@@ -1214,7 +1394,8 @@ public class SwingView extends View {
             for (int i = 0; i < getChildCount(); i++) {
                 Object child = getChildAt(i);
                 if (child instanceof CharacterTreeNode) {
-                    total += ((CharacterTreeNode) child).getCharacter().getPowerLevel();
+                    total +=
+                        ((CharacterTreeNode) child).getCharacter().getPowerLevel();
                 }
             }
             return total;
@@ -1222,6 +1403,7 @@ public class SwingView extends View {
     }
 
     private static class CharacterTreeNode extends DefaultMutableTreeNode {
+
         private final Character character;
 
         public CharacterTreeNode(Character character) {
@@ -1235,17 +1417,39 @@ public class SwingView extends View {
 
         @Override
         public String toString() {
-            return "[CHAR] " + character.getName() + " (Power: " + character.getPowerLevel() + ")";
+            return (
+                "[CHAR] " +
+                character.getName() +
+                " (Power: " +
+                character.getPowerLevel() +
+                ")"
+            );
         }
     }
 
     // Custom tree cell renderer
-    private static class CustomTreeCellRenderer extends DefaultTreeCellRenderer {
-        @Override
-        public Component getTreeCellRendererComponent(JTree tree, Object value,
-                boolean selected, boolean expanded, boolean leaf, int row, boolean hasFocus) {
+    private static class CustomTreeCellRenderer
+        extends DefaultTreeCellRenderer {
 
-            super.getTreeCellRendererComponent(tree, value, selected, expanded, leaf, row, hasFocus);
+        @Override
+        public Component getTreeCellRendererComponent(
+            JTree tree,
+            Object value,
+            boolean selected,
+            boolean expanded,
+            boolean leaf,
+            int row,
+            boolean hasFocus
+        ) {
+            super.getTreeCellRendererComponent(
+                tree,
+                value,
+                selected,
+                expanded,
+                leaf,
+                row,
+                hasFocus
+            );
 
             if (value instanceof ArmyTreeNode) {
                 setIcon(null); // Army icon handled in toString
@@ -1261,6 +1465,7 @@ public class SwingView extends View {
 
     // Battle history tree node classes
     private static class BattleHistoryNode extends DefaultMutableTreeNode {
+
         private final BattleHistory battle;
 
         public BattleHistoryNode(BattleHistory battle) {
@@ -1279,6 +1484,7 @@ public class SwingView extends View {
     }
 
     private static class ActionNode extends DefaultMutableTreeNode {
+
         private final BattleAction action;
 
         public ActionNode(BattleAction action) {
@@ -1298,12 +1504,28 @@ public class SwingView extends View {
     }
 
     // Battle history tree cell renderer
-    private static class BattleHistoryTreeRenderer extends DefaultTreeCellRenderer {
-        @Override
-        public Component getTreeCellRendererComponent(JTree tree, Object value,
-                boolean selected, boolean expanded, boolean leaf, int row, boolean hasFocus) {
+    private static class BattleHistoryTreeRenderer
+        extends DefaultTreeCellRenderer {
 
-            super.getTreeCellRendererComponent(tree, value, selected, expanded, leaf, row, hasFocus);
+        @Override
+        public Component getTreeCellRendererComponent(
+            JTree tree,
+            Object value,
+            boolean selected,
+            boolean expanded,
+            boolean leaf,
+            int row,
+            boolean hasFocus
+        ) {
+            super.getTreeCellRendererComponent(
+                tree,
+                value,
+                selected,
+                expanded,
+                leaf,
+                row,
+                hasFocus
+            );
 
             if (value instanceof BattleHistoryNode) {
                 setIcon(null); // Battle icon handled in toString
@@ -1321,95 +1543,18 @@ public class SwingView extends View {
 
     private void applySettings() {
         GameSettings settings = GameSettings.getInstance();
+        settings.setMaxStatPoints((Integer) maxStatPointsSpinner.getValue());
+        settings.setMaxCharactersPerGroup(
+            (Integer) maxCharactersSpinner.getValue()
+        );
+        settings.setMaxGroupsPerArmy((Integer) maxGroupsSpinner.getValue());
 
-        int newMaxStatPoints = (Integer) maxStatPointsSpinner.getValue();
-        int newMaxCharactersPerGroup = (Integer) maxCharactersSpinner.getValue();
-        int newMaxGroupsPerArmy = (Integer) maxGroupsSpinner.getValue();
-
-        // Validation des conflits existants
-        StringBuilder conflicts = new StringBuilder();
-
-        // Vérifier les stats des personnages existants
-        if (newMaxStatPoints < settings.getMaxStatPoints()) {
-            java.util.List<Character> conflictingCharacters = new java.util.ArrayList<>();
-            for (Character c : dao.findAll()) {
-                int totalStats = c.getStrength() + c.getAgility() + c.getIntelligence();
-                if (totalStats > newMaxStatPoints) {
-                    conflictingCharacters.add(c);
-                }
-            }
-            if (!conflictingCharacters.isEmpty()) {
-                conflicts.append("- ").append(conflictingCharacters.size())
-                        .append(" character(s) exceed the new max stat points limit (")
-                        .append(newMaxStatPoints).append("):\n");
-                for (Character c : conflictingCharacters) {
-                    int total = c.getStrength() + c.getAgility() + c.getIntelligence();
-                    conflicts.append("  • ").append(c.getName())
-                            .append(" (Total: ").append(total).append(")\n");
-                }
-            }
-        }
-
-        // Vérifier les armées existantes avec trop de parties
-        if (newMaxGroupsPerArmy < settings.getMaxGroupsPerArmy()) {
-            int conflictingArmies = 0;
-            for (int i = 0; i < rootNode.getChildCount(); i++) {
-                DefaultMutableTreeNode armyNode = (DefaultMutableTreeNode) rootNode.getChildAt(i);
-                if (armyNode.getChildCount() > newMaxGroupsPerArmy) {
-                    conflictingArmies++;
-                }
-            }
-            if (conflictingArmies > 0) {
-                conflicts.append("- ").append(conflictingArmies)
-                        .append(" army/armies exceed the new max parties per army limit (")
-                        .append(newMaxGroupsPerArmy).append(")\n");
-            }
-        }
-
-        // Vérifier les parties existantes avec trop de personnages
-        if (newMaxCharactersPerGroup < settings.getMaxCharactersPerGroup()) {
-            int conflictingParties = 0;
-            for (int i = 0; i < rootNode.getChildCount(); i++) {
-                DefaultMutableTreeNode armyNode = (DefaultMutableTreeNode) rootNode.getChildAt(i);
-                for (int j = 0; j < armyNode.getChildCount(); j++) {
-                    DefaultMutableTreeNode partyNode = (DefaultMutableTreeNode) armyNode.getChildAt(j);
-                    if (partyNode.getChildCount() > newMaxCharactersPerGroup) {
-                        conflictingParties++;
-                    }
-                }
-            }
-            if (conflictingParties > 0) {
-                conflicts.append("- ").append(conflictingParties)
-                        .append(" party/parties exceed the new max characters per party limit (")
-                        .append(newMaxCharactersPerGroup).append(")\n");
-            }
-        }
-
-        // Si des conflits existent, demander confirmation
-        if (conflicts.length() > 0) {
-            String message = "Warning: Applying these settings will conflict with existing data:\n\n" +
-                    conflicts.toString() +
-                    "\nDo you want to proceed anyway? Existing data will remain but may violate the new rules.";
-
-            int choice = JOptionPane.showConfirmDialog(frame, message, "Settings Conflict",
-                    JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-
-            if (choice != JOptionPane.YES_OPTION) {
-                return; // Annuler l'application des paramètres
-            }
-        }
-
-        // Appliquer les nouveaux paramètres
-        settings.setMaxStatPoints(newMaxStatPoints);
-        settings.setMaxCharactersPerGroup(newMaxCharactersPerGroup);
-        settings.setMaxGroupsPerArmy(newMaxGroupsPerArmy);
-
-        String successMessage = "Settings applied successfully";
-        if (conflicts.length() > 0) {
-            successMessage += "\n\nNote: Some existing data may now violate the new rules. Consider reviewing and updating as needed.";
-        }
-
-        JOptionPane.showMessageDialog(frame, successMessage, "Settings", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(
+            frame,
+            "Settings applied successfully",
+            "Settings",
+            JOptionPane.INFORMATION_MESSAGE
+        );
         eventBus.notifyObservers("SETTINGS_CHANGED", "Settings updated");
     }
 
@@ -1456,13 +1601,18 @@ public class SwingView extends View {
 
         // Expand all battles by default
         for (int i = 0; i < historyRootNode.getChildCount(); i++) {
-            TreePath battlePath = new TreePath(new Object[] { historyRootNode, historyRootNode.getChildAt(i) });
+            TreePath battlePath = new TreePath(
+                new Object[] { historyRootNode, historyRootNode.getChildAt(i) }
+            );
             battleHistoryTree.expandPath(battlePath);
         }
     }
 
     private void startLiveBattleAnimation() {
-        if (liveBattleHistory == null || liveBattleHistory.getActions().isEmpty()) {
+        if (
+            liveBattleHistory == null ||
+            liveBattleHistory.getActions().isEmpty()
+        ) {
             combatLogArea.append("No actions to display.\n");
             return;
         }
@@ -1499,10 +1649,15 @@ public class SwingView extends View {
                 // Display winner
                 Character winner = liveBattleHistory.getWinner();
                 if (winner != null) {
-                    combatLogArea.append("\n=== Winner: " + winner.getName() + " ===\n");
+                    combatLogArea.append(
+                        "\n=== Winner: " + winner.getName() + " ===\n"
+                    );
                 }
                 combatLogArea.append(
-                        "Battle saved to history with " + liveBattleHistory.getActions().size() + " actions.\n");
+                    "Battle saved to history with " +
+                        liveBattleHistory.getActions().size() +
+                        " actions.\n"
+                );
 
                 // Re-enable Observer events
                 isAnimatingCombat = false;
@@ -1517,7 +1672,9 @@ public class SwingView extends View {
             return;
         }
 
-        BattleAction action = liveBattleHistory.getActions().get(currentActionIndex);
+        BattleAction action = liveBattleHistory
+            .getActions()
+            .get(currentActionIndex);
 
         // Update turn counter if necessary
         if (action.getRound() > currentTurn) {
@@ -1526,7 +1683,8 @@ public class SwingView extends View {
         }
 
         // Display the action in combat log
-        String actionText = "Turn " + action.getRound() + ": " + action.getDescription();
+        String actionText =
+            "Turn " + action.getRound() + ": " + action.getDescription();
         combatLogArea.append(actionText + "\n");
         combatLogArea.setCaretPosition(combatLogArea.getDocument().getLength());
 
@@ -1545,10 +1703,18 @@ public class SwingView extends View {
             // Determine which fighter took damage based on target
             Character target = action.getTarget();
 
-            if (target.getName().equals(liveBattleHistory.getFighter1().getName())) {
+            if (
+                target
+                    .getName()
+                    .equals(liveBattleHistory.getFighter1().getName())
+            ) {
                 // Fighter1 takes damage
                 liveFighter1HP = Math.max(0, liveFighter1HP - damage);
-            } else if (target.getName().equals(liveBattleHistory.getFighter2().getName())) {
+            } else if (
+                target
+                    .getName()
+                    .equals(liveBattleHistory.getFighter2().getName())
+            ) {
                 // Fighter2 takes damage
                 liveFighter2HP = Math.max(0, liveFighter2HP - damage);
             }
@@ -1563,12 +1729,20 @@ public class SwingView extends View {
             liveFighter2HPBar.setValue(liveFighter2HP);
 
             // Update HP text
-            liveFighter1HPBar.setString(liveFighter1HP + "/" + liveFighter1MaxHP + " HP");
-            liveFighter2HPBar.setString(liveFighter2HP + "/" + liveFighter2MaxHP + " HP");
+            liveFighter1HPBar.setString(
+                liveFighter1HP + "/" + liveFighter1MaxHP + " HP"
+            );
+            liveFighter2HPBar.setString(
+                liveFighter2HP + "/" + liveFighter2MaxHP + " HP"
+            );
 
             // Calculate percentages for color determination
-            int hp1Percentage = liveFighter1MaxHP > 0 ? (liveFighter1HP * 100) / liveFighter1MaxHP : 0;
-            int hp2Percentage = liveFighter2MaxHP > 0 ? (liveFighter2HP * 100) / liveFighter2MaxHP : 0;
+            int hp1Percentage = liveFighter1MaxHP > 0
+                ? (liveFighter1HP * 100) / liveFighter1MaxHP
+                : 0;
+            int hp2Percentage = liveFighter2MaxHP > 0
+                ? (liveFighter2HP * 100) / liveFighter2MaxHP
+                : 0;
 
             // Update colors based on HP percentage
             liveFighter1HPBar.setForeground(getHPColor(hp1Percentage));
@@ -1589,10 +1763,12 @@ public class SwingView extends View {
     private void handleBattleDoubleClick() {
         TreePath selectionPath = battleHistoryTree.getSelectionPath();
         if (selectionPath != null) {
-            DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectionPath.getLastPathComponent();
+            DefaultMutableTreeNode selectedNode =
+                (DefaultMutableTreeNode) selectionPath.getLastPathComponent();
 
             if (selectedNode instanceof BattleHistoryNode) {
-                BattleHistory battle = ((BattleHistoryNode) selectedNode).getBattle();
+                BattleHistory battle =
+                    ((BattleHistoryNode) selectedNode).getBattle();
                 showBattleDetails(battle);
             } else if (selectedNode instanceof ActionNode) {
                 BattleAction action = ((ActionNode) selectedNode).getAction();
@@ -1604,16 +1780,25 @@ public class SwingView extends View {
     private void replaySelectedBattle() {
         TreePath selectionPath = battleHistoryTree.getSelectionPath();
         if (selectionPath == null) {
-            JOptionPane.showMessageDialog(frame, "Please select a battle to replay", "No Selection",
-                    JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(
+                frame,
+                "Please select a battle to replay",
+                "No Selection",
+                JOptionPane.WARNING_MESSAGE
+            );
             return;
         }
 
-        DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectionPath.getLastPathComponent();
+        DefaultMutableTreeNode selectedNode =
+            (DefaultMutableTreeNode) selectionPath.getLastPathComponent();
 
         if (!(selectedNode instanceof BattleHistoryNode)) {
-            JOptionPane.showMessageDialog(frame, "Please select a battle (not an action) to replay",
-                    "Invalid Selection", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(
+                frame,
+                "Please select a battle (not an action) to replay",
+                "Invalid Selection",
+                JOptionPane.WARNING_MESSAGE
+            );
             return;
         }
 
@@ -1623,10 +1808,11 @@ public class SwingView extends View {
 
     private void clearBattleHistory() {
         int result = JOptionPane.showConfirmDialog(
-                frame,
-                "Are you sure you want to clear all battle history?",
-                "Confirm Clear",
-                JOptionPane.YES_NO_OPTION);
+            frame,
+            "Are you sure you want to clear all battle history?",
+            "Confirm Clear",
+            JOptionPane.YES_NO_OPTION
+        );
 
         if (result == JOptionPane.YES_OPTION) {
             battleHistoryManager.clearHistory();
@@ -1637,16 +1823,25 @@ public class SwingView extends View {
     private void exportSelectedBattle() {
         TreePath selectionPath = battleHistoryTree.getSelectionPath();
         if (selectionPath == null) {
-            JOptionPane.showMessageDialog(frame, "Please select a battle to export", "No Selection",
-                    JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(
+                frame,
+                "Please select a battle to export",
+                "No Selection",
+                JOptionPane.WARNING_MESSAGE
+            );
             return;
         }
 
-        DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectionPath.getLastPathComponent();
+        DefaultMutableTreeNode selectedNode =
+            (DefaultMutableTreeNode) selectionPath.getLastPathComponent();
 
         if (!(selectedNode instanceof BattleHistoryNode)) {
-            JOptionPane.showMessageDialog(frame, "Please select a battle to export", "Invalid Selection",
-                    JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(
+                frame,
+                "Please select a battle to export",
+                "Invalid Selection",
+                JOptionPane.WARNING_MESSAGE
+            );
             return;
         }
 
@@ -1659,12 +1854,30 @@ public class SwingView extends View {
         details.append("Battle Details\n");
         details.append("=============\n");
         details.append("Battle: ").append(battle.getBattleName()).append("\n");
-        details.append("Date: ").append(battle.getFormattedTimestamp()).append("\n");
-        details.append("Fighter 1: ").append(battle.getFighter1().getName()).append("\n");
-        details.append("Fighter 2: ").append(battle.getFighter2().getName()).append("\n");
-        details.append("Winner: ").append(battle.getWinner() != null ? battle.getWinner().getName() : "Unknown")
-                .append("\n");
-        details.append("Actions: ").append(battle.getActions().size()).append("\n\n");
+        details
+            .append("Date: ")
+            .append(battle.getFormattedTimestamp())
+            .append("\n");
+        details
+            .append("Fighter 1: ")
+            .append(battle.getFighter1().getName())
+            .append("\n");
+        details
+            .append("Fighter 2: ")
+            .append(battle.getFighter2().getName())
+            .append("\n");
+        details
+            .append("Winner: ")
+            .append(
+                battle.getWinner() != null
+                    ? battle.getWinner().getName()
+                    : "Unknown"
+            )
+            .append("\n");
+        details
+            .append("Actions: ")
+            .append(battle.getActions().size())
+            .append("\n\n");
 
         details.append("Action Details:\n");
         for (BattleAction action : battle.getActions()) {
@@ -1677,45 +1890,62 @@ public class SwingView extends View {
         JScrollPane scrollPane = new JScrollPane(textArea);
         scrollPane.setPreferredSize(new Dimension(600, 400));
 
-        JOptionPane.showMessageDialog(frame, scrollPane, "Battle Details", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(
+            frame,
+            scrollPane,
+            "Battle Details",
+            JOptionPane.INFORMATION_MESSAGE
+        );
     }
 
     private void showActionDetails(BattleAction action) {
         String details = String.format(
-                "Action Details\n" +
-                        "Round: %d\n" +
-                        "Actor: %s\n" +
-                        "Target: %s\n" +
-                        "Action: %s\n" +
-                        "Damage: %d\n" +
-                        "Modifiable: %s\n" +
-                        "Description: %s",
-                action.getRound(),
-                action.getActor().getName(),
-                action.getTarget().getName(),
-                action.getActionType(),
-                action.getDamage(),
-                action.isModifiable() ? "Yes" : "No",
-                action.getDescription());
+            "Action Details\n" +
+                "Round: %d\n" +
+                "Actor: %s\n" +
+                "Target: %s\n" +
+                "Action: %s\n" +
+                "Damage: %d\n" +
+                "Modifiable: %s\n" +
+                "Description: %s",
+            action.getRound(),
+            action.getActor().getName(),
+            action.getTarget().getName(),
+            action.getActionType(),
+            action.getDamage(),
+            action.isModifiable() ? "Yes" : "No",
+            action.getDescription()
+        );
 
-        JOptionPane.showMessageDialog(frame, details, "Action Details", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(
+            frame,
+            details,
+            "Action Details",
+            JOptionPane.INFORMATION_MESSAGE
+        );
     }
 
     private void openInteractiveReplay(BattleHistory battle) {
         // Launch the interactive replay window with callback to refresh history
         InteractiveBattleReplay replayWindow = new InteractiveBattleReplay(
-                frame,
-                battle,
-                battleHistoryManager,
-                () -> refreshBattleHistory() // Callback to refresh history tree when variant is saved
+            frame,
+            battle,
+            battleHistoryManager,
+            () -> refreshBattleHistory() // Callback to refresh history tree when variant is saved
         );
         replayWindow.setVisible(true);
     }
 
     private void exportBattleToText(BattleHistory battle) {
         StringBuilder export = new StringBuilder();
-        export.append("Battle Export: ").append(battle.getBattleName()).append("\n");
-        export.append("Date: ").append(battle.getFormattedTimestamp()).append("\n");
+        export
+            .append("Battle Export: ")
+            .append(battle.getBattleName())
+            .append("\n");
+        export
+            .append("Date: ")
+            .append(battle.getFormattedTimestamp())
+            .append("\n");
         export.append("==========================================\n\n");
 
         for (BattleAction action : battle.getActions()) {
@@ -1723,7 +1953,13 @@ public class SwingView extends View {
         }
 
         export.append("\n==========================================\n");
-        export.append("Winner: ").append(battle.getWinner() != null ? battle.getWinner().getName() : "Unknown");
+        export
+            .append("Winner: ")
+            .append(
+                battle.getWinner() != null
+                    ? battle.getWinner().getName()
+                    : "Unknown"
+            );
 
         JTextArea textArea = new JTextArea(export.toString());
         textArea.setEditable(true);
@@ -1732,7 +1968,12 @@ public class SwingView extends View {
         JScrollPane scrollPane = new JScrollPane(textArea);
         scrollPane.setPreferredSize(new Dimension(600, 400));
 
-        JOptionPane.showMessageDialog(frame, scrollPane, "Export Battle - Copy Text", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(
+            frame,
+            scrollPane,
+            "Export Battle - Copy Text",
+            JOptionPane.INFORMATION_MESSAGE
+        );
     }
 
     @Override
@@ -1746,7 +1987,12 @@ public class SwingView extends View {
     @Override
     public void showMessage(String message) {
         SwingUtilities.invokeLater(() -> {
-            JOptionPane.showMessageDialog(frame, message, "Message", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(
+                frame,
+                message,
+                "Message",
+                JOptionPane.INFORMATION_MESSAGE
+            );
         });
     }
 
@@ -1764,9 +2010,12 @@ public class SwingView extends View {
                     }
                     // Format the action like in the replay (with turn number)
                     currentTurn++;
-                    String actionText = "[" + currentTurn + "] " + data.toString();
+                    String actionText =
+                        "[" + currentTurn + "] " + data.toString();
                     combatLogArea.append(actionText + "\n");
-                    combatLogArea.setCaretPosition(combatLogArea.getDocument().getLength());
+                    combatLogArea.setCaretPosition(
+                        combatLogArea.getDocument().getLength()
+                    );
 
                     // Update HP bars and turn counter (extract HP from action text)
                     updateLiveBattleStatus(data.toString());
@@ -1801,7 +2050,10 @@ public class SwingView extends View {
         return current;
     }
 
-    private Character reapplyDecorators(Character originalDecorated, Character newBase) {
+    private Character reapplyDecorators(
+        Character originalDecorated,
+        Character newBase
+    ) {
         // Get the decorator chain from the original character
         java.util.List<String> decorators = new java.util.ArrayList<>();
         Character current = originalDecorated;
